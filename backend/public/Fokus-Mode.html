@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fokus Mode - Masjid Al-Ikhlas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Islamic Geometric Pattern */
+        .pattern-bg {
+            position: fixed;
+            inset: 0;
+            opacity: 0.04;
+            background-image:
+                repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(251, 191, 36, 0.1) 35px, rgba(251, 191, 36, 0.1) 70px),
+                repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(251, 191, 36, 0.1) 35px, rgba(251, 191, 36, 0.1) 70px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .ambient-glow {
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 50% 0%, rgba(251, 191, 36, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 100%, rgba(30, 27, 75, 0.5) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        /* Main Card */
+        .focus-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            border-radius: 40px;
+            padding: 5rem 8rem;
+            text-align: center;
+            box-shadow:
+                0 32px 64px -12px rgba(0, 0, 0, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                0 0 120px rgba(251, 191, 36, 0.08);
+            position: relative;
+            max-width: 1000px;
+            width: 100%;
+            animation: enter 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        @keyframes enter {
+            from {
+                opacity: 0;
+                transform: translateY(40px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .frame-corner {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border: 2px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .frame-tl {
+            top: 30px;
+            left: 30px;
+            border-right: 0;
+            border-bottom: 0;
+            border-radius: 20px 0 0 0;
+        }
+
+        .frame-tr {
+            top: 30px;
+            right: 30px;
+            border-left: 0;
+            border-bottom: 0;
+            border-radius: 0 20px 0 0;
+        }
+
+        .frame-bl {
+            bottom: 30px;
+            left: 30px;
+            border-right: 0;
+            border-top: 0;
+            border-radius: 0 0 0 20px;
+        }
+
+        .frame-br {
+            bottom: 30px;
+            right: 30px;
+            border-left: 0;
+            border-top: 0;
+            border-radius: 0 0 20px 0;
+        }
+
+        /* Clock Badge - TENGAH ATAS */
+        .clock-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            padding: 1rem 2.5rem;
+            border-radius: 100px;
+            margin-bottom: 3rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .clock-icon {
+            color: #fbbf24;
+            font-size: 1.25rem;
+        }
+
+        .clock-text {
+            color: #fbbf24;
+            font-size: 1.5rem;
+            font-weight: 600;
+            font-family: 'Inter', monospace;
+            letter-spacing: 0.05em;
+        }
+
+        /* Typography */
+        .label-text {
+            font-family: 'Amiri', serif;
+            color: #94a3b8;
+            font-size: 1.75rem;
+            font-weight: 400;
+            margin-bottom: 1rem;
+            letter-spacing: 0.08em;
+        }
+
+        .prayer-title {
+            font-family: 'Amiri', serif;
+            color: #fbbf24;
+            font-size: 7rem;
+            font-weight: 700;
+            line-height: 1.1;
+            text-shadow: 0 4px 40px rgba(251, 191, 36, 0.25);
+            margin-bottom: 0.5rem;
+        }
+
+        .prayer-name {
+            font-family: 'Amiri', serif;
+            color: #fde68a;
+            font-size: 3rem;
+            font-weight: 400;
+            margin-bottom: 2rem;
+        }
+
+        .subtitle {
+            color: #64748b;
+            font-size: 1.25rem;
+            font-weight: 300;
+            font-style: italic;
+            letter-spacing: 0.05em;
+        }
+
+        /* Animations */
+        @keyframes breathe {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.3;
+            }
+
+            50% {
+                transform: scale(1.1);
+                opacity: 0.5;
+            }
+        }
+
+        /* Glow Effect */
+        .soft-glow {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.12) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            animation: breathe 6s ease-in-out infinite;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .prayer-title {
+                font-size: 4rem;
+            }
+
+            .prayer-name {
+                font-size: 2rem;
+            }
+
+            .focus-card {
+                padding: 3rem 2rem;
+            }
+
+            .clock-badge {
+                padding: 0.75rem 1.5rem;
+            }
+
+            .clock-text {
+                font-size: 1.25rem;
+            }
+        }
+
+        /* Masjid Silhouette */
+        .masjid-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 120px;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .silhouette {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 600px;
+            height: 80px;
+            opacity: 0.4;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 80'%3E%3Cpath fill='%23000' d='M0,80 L0,60 Q20,60 20,45 Q20,30 35,30 Q50,30 50,45 Q50,60 70,60 L70,40 Q85,40 85,25 Q85,10 100,10 Q115,10 115,25 Q115,40 130,40 L130,60 L150,60 L150,35 Q165,35 165,20 Q165,5 180,5 Q195,5 195,20 Q195,35 210,35 L210,60 L230,60 L230,40 Q245,40 245,25 Q245,10 260,10 Q275,10 275,25 Q275,40 290,40 L290,60 L310,60 L310,35 Q325,35 325,20 Q325,5 340,5 Q355,5 355,20 Q355,35 370,35 L370,60 L390,60 L390,40 Q405,40 405,25 Q405,10 420,10 Q435,10 435,25 Q435,40 450,40 L450,60 L470,60 L470,45 Q485,45 485,35 Q485,25 500,25 Q515,25 515,35 Q515,45 530,45 L530,60 L550,60 L550,50 Q565,50 565,40 Q565,30 580,30 Q595,30 595,40 L595,60 L600,60 L600,80 Z'/%3E%3C/svg%3E") bottom center no-repeat;
+            background-size: contain;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Backgrounds -->
+    <div class="pattern-bg"></div>
+    <div class="ambient-glow"></div>
+
+    <div class="container">
+        <!-- Main Card -->
+        <div class="focus-card">
+            <!-- Frame Corners -->
+            <div class="frame-corner frame-tl"></div>
+            <div class="frame-corner frame-tr"></div>
+            <div class="frame-corner frame-bl"></div>
+            <div class="frame-corner frame-br"></div>
+
+            <!-- Glow -->
+            <div class="soft-glow"></div>
+
+            <!-- Clock Badge (Tengah Atas) -->
+            <div class="clock-badge">
+                <i class="far fa-clock clock-icon"></i>
+                <span class="clock-text" id="clock">--:--:--</span>
+            </div>
+
+            <!-- Content -->
+            <div class="label-text">Sedang Berlangsungnya</div>
+            <h1 class="prayer-name">Shalat</h1>
+            <div class="prayer-title" id="active-prayer">Memuat...</div>
+
+            <p class="subtitle">Mohon menjaga ketenangan dan kekhusyukan</p>
+        </div>
+    </div>
+
+    <!-- Footer Silhouette -->
+    <div class="masjid-footer">
+        <div class="silhouette"></div>
+    </div>
+
+    <script>
+        let autoRedirect;
+        let FOKUS_DURATION = 10 * 60 * 1000; // 10 menit default
+
+        // Fungsi Jam Realtime - UPDATE SETIAP DETIK
+        function startClock() {
+            const clockEl = document.getElementById('clock');
+            if (!clockEl) return;
+
+            function update() {
+                const now = new Date();
+                clockEl.textContent = now.toLocaleTimeString('id-ID', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+            }
+            update();
+            setInterval(update, 1000);
+        }
+
+        // Fungsi Redirect (Bisa ke Display Utama atau ke Shalat Lanjutan)
+        function redirectToDisplay(nextPrayer = null) {
+            // Clear data fokus dari memori
+            localStorage.removeItem('fokusActive');
+            localStorage.removeItem('fokusPrayer');
+            localStorage.removeItem('fokusStart');
+            localStorage.removeItem('fokusDuration');
+            localStorage.removeItem('currentPrayer');
+
+            if (nextPrayer) {
+                // Jika ada shalat lanjutan (Contoh: Tarawih), lempar kembali ke Fokus Mode
+                window.location.href = `/Fokus-Mode.html?prayer=${nextPrayer}`;
+            } else {
+                // Jika benar-benar selesai, tandai shalat terakhir dan kembali ke Beranda/Display
+                const currentPrayer = document.getElementById('active-prayer').textContent;
+                localStorage.setItem('lastPrayerCompleted', currentPrayer);
+                localStorage.setItem('lastPrayerTime', Date.now());
+
+                // Redirect ke halaman index/display
+                window.location.href = '/';
+                // Catatan: Jika Anda menggunakan display.html, ubah '/' menjadi '/display.html?completed=1'
+            }
+        }
+
+        // Inisialisasi Utama saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. Ambil nama shalat saat ini dari URL atau localStorage
+            const urlParams = new URLSearchParams(window.location.search);
+            let rawPrayer = urlParams.get('prayer') || localStorage.getItem('currentPrayer') || 'dzuhur';
+            let currentPrayer = rawPrayer.toLowerCase();
+
+            // ==========================================
+            // LOGIKA KHUSUS 1: DETEKSI SHALAT JUMAT
+            // ==========================================
+            // Jika dari sistem terekam Dzuhur tapi hari ini adalah Jumat (getDay() === 5)
+            if (currentPrayer === 'dzuhur' && new Date().getDay() === 5) {
+                currentPrayer = 'jumat';
+            }
+
+            // Tampilkan nama shalat ke layar (Huruf kapital di awal)
+            const displayPrayerName = currentPrayer.charAt(0).toUpperCase() + currentPrayer.slice(1);
+            const activePrayerEl = document.getElementById('active-prayer');
+            if (activePrayerEl) activePrayerEl.textContent = displayPrayerName;
+
+            // Jalankan jam realtime
+            startClock();
+
+            // 2. Ambil Durasi Fokus Mode dari API / Database
+            let durationMinutes = parseInt(urlParams.get('duration')) || parseInt(localStorage.getItem('fokusDuration')) || 10;
+
+            try {
+                const response = await fetch('/api/settings');
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    const settingKey = `fokus_duration_${currentPrayer}`;
+                    const targetSetting = result.data.find(s => s.setting_key === settingKey);
+
+                    if (targetSetting && targetSetting.setting_value) {
+                        durationMinutes = parseInt(targetSetting.setting_value);
+                    }
+                }
+            } catch (error) {
+                console.error('Gagal mengambil pengaturan durasi fokus dari server:', error);
+            }
+
+            console.log(`⏱️ Mode Fokus aktif untuk ${displayPrayerName} selama ${durationMinutes} menit.`);
+            FOKUS_DURATION = durationMinutes * 60 * 1000; // Konversi ke milidetik
+
+            // Simpan state fokus ke localStorage agar sistem tahu layar sedang dikunci
+            localStorage.setItem('fokusActive', 'true');
+            localStorage.setItem('fokusPrayer', currentPrayer);
+            localStorage.setItem('fokusStart', Date.now());
+            localStorage.setItem('fokusDuration', durationMinutes);
+
+            // ==========================================
+            // LOGIKA KHUSUS 2: CEK BULAN RAMADHAN
+            // ==========================================
+            const hijriDate = localStorage.getItem('hijri_date_cache') || '';
+            const isRamadhan = hijriDate.toLowerCase().includes('ramadhan');
+
+            // 3. Set timer otomatis untuk mengakhiri Mode Fokus
+            autoRedirect = setTimeout(() => {
+                if (currentPrayer === 'isya' && isRamadhan) {
+                    console.log("🌙 Waktu Isya selesai di Bulan Ramadhan! Melanjutkan langsung ke Tarawih...");
+                    // Panggil fungsi redirect dengan parameter tarawih
+                    redirectToDisplay('tarawih');
+                } else {
+                    console.log("⏳ Waktu fokus habis, kembali ke display utama...");
+                    redirectToDisplay();
+                }
+            }, FOKUS_DURATION);
+
+            // --- Event Listeners Pendukung ---
+
+            // Bersihkan timer jika halaman di-refresh/ditutup tiba-tiba
+            window.addEventListener('beforeunload', () => {
+                clearTimeout(autoRedirect);
+            });
+
+            // Tombol Darurat (Escape) untuk membatalkan mode fokus manual
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    clearTimeout(autoRedirect);
+                    redirectToDisplay();
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

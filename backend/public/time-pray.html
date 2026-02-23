@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menuju Adzan - Masjid Al-Ikhlas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&family=Jockey+One&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            font-family: 'Kanit', sans-serif;
+            overflow: hidden;
+        }
+
+        .font-mono-custom {
+            font-family: 'Jockey One', monospace;
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                text-shadow: 0 0 20px rgba(250, 204, 21, 0.3);
+            }
+
+            50% {
+                text-shadow: 0 0 40px rgba(250, 204, 21, 0.8);
+            }
+        }
+
+        .animate-pulse-glow {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col items-center justify-center h-screen w-screen">
+
+    <!-- Background Pattern -->
+    <div class="absolute inset-0 opacity-10">
+        <div
+            class="absolute inset-0 bg-[radial-gradient(circle_at_center,_#ffffff_1px,_transparent_1px)] bg-[length:40px_40px]">
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="relative z-10 text-center px-4">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex items-center justify-center space-x-3 mb-4">
+                <div class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                <span class="text-sm font-light tracking-widest uppercase text-gray-300">Menuju Waktu Adzan</span>
+                <div class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+            </div>
+            <h2 id="prayer-name" class="text-5xl md:text-7xl font-bold text-white mb-2 drop-shadow-lg">
+                ...
+            </h2>
+            <p class="text-xl text-gray-400 font-light">Akan berkumandang dalam</p>
+        </div>
+
+        <!-- Countdown Circle -->
+        <div class="relative w-96 h-96 mx-auto mb-8 animate-float">
+            <!-- Circle Background -->
+            <div class="absolute inset-0 border-8 border-yellow-500/20 rounded-full"></div>
+
+            <!-- Progress Circle -->
+            <svg class="absolute inset-0 transform -rotate-90" viewBox="0 0 100 100">
+                <circle id="progress-circle" cx="50" cy="50" r="45" fill="none" stroke="rgba(250, 204, 21, 0.3)"
+                    stroke-width="4" stroke-dasharray="282.6" stroke-dashoffset="0" />
+                <circle id="progress-fill" cx="50" cy="50" r="45" fill="none" stroke="#facc15" stroke-width="4"
+                    stroke-dasharray="282.6" stroke-dashoffset="0" stroke-linecap="round" />
+            </svg>
+
+            <!-- Timer Display -->
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <div id="countdown" class="text-8xl md:text-9xl font-mono-custom text-yellow-300 animate-pulse-glow">
+                    --:--
+                </div>
+                <div class="text-lg text-gray-400 mt-2">menit : detik</div>
+            </div>
+        </div>
+
+        <!-- Info Panel -->
+        <div class="grid grid-cols-2 gap-4 max-w-md mx-auto mt-8">
+            <div class="bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20">
+                <div class="text-xs text-gray-400 mb-1">Waktu Adzan</div>
+                <div id="adzan-time" class="text-xl font-bold text-yellow-300">--:--</div>
+            </div>
+            <div class="bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20">
+                <div class="text-xs text-gray-400 mb-1">Durasi Iqomah</div>
+                <div id="iqomah-duration" class="text-xl font-bold text-green-300">10 menit</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. SETUP DATA & VARIABEL ---
+        const prayerName = localStorage.getItem('adzan_prayer_name') || 'SHALAT';
+        // Pastikan timestamp valid (fallback ke 5 menit lagi jika kosong)
+        const adzanTimestamp = parseInt(localStorage.getItem('adzan_timestamp')) || Date.now() + (5 * 60 * 1000);
+        const iqomahDuration = parseInt(localStorage.getItem('iqomah_duration')) || 10;
+
+        // --- 2. SETUP AWAL UI ---
+        const countdownEl = document.getElementById('countdown');
+        const progressFill = document.getElementById('progress-fill');
+
+        document.getElementById('prayer-name').textContent = prayerName;
+        document.getElementById('iqomah-duration').textContent = iqomahDuration + ' menit';
+
+        // Hitung total durasi awal untuk persentase progress bar
+        // (Opsional: idealnya disimpan saat timer mulai, tapi ini estimasi sisa)
+        const totalDuration = Math.max(1, Math.floor((adzanTimestamp - Date.now()) / 1000));
+
+        // --- 3. SETUP AUDIO ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        let lastBeepSecond = -1; // Penanda agar beep tidak bunyi berkali-kali dalam detik yang sama
+
+        function playBeep(frequency = 880, duration = 100, volume = 0.1) {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new AudioContext();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.frequency.value = frequency;
+                gain.gain.value = volume;
+
+                osc.start();
+                setTimeout(() => osc.stop(), duration);
+            } catch (e) {
+                console.error('Audio error:', e);
+            }
+        }
+
+        // --- 4. LOGIKA UTAMA (TIMER) ---
+        const timer = setInterval(() => {
+            const now = Date.now();
+            const distance = adzanTimestamp - now;
+
+            // --- A. JIKA WAKTU HABIS (ADZAN TIBA) ---
+            if (distance < 0) {
+                clearInterval(timer);
+
+                // Set UI ke 00:00
+                countdownEl.innerHTML = "00:00";
+
+                // Bunyi panjang (440Hz, 2 detik)
+                playBeep(440, 2000, 0.3);
+
+                // Redirect (beri jeda sedikit agar bunyi sempat mulai)
+                setTimeout(() => {
+                    window.location.href = '/iqomah_mode.html';
+                }, 1000);
+
+                return;
+            }
+
+            // --- B. PERHITUNGAN WAKTU ---
+            const minutes = Math.floor(distance / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            // Update Text Countdown
+            countdownEl.innerHTML =
+                (minutes < 10 ? "0" + minutes : minutes) + ":" +
+                (seconds < 10 ? "0" + seconds : seconds);
+
+            // Update Jam Adzan (hanya perlu sekali sebenarnya, tapi aman ditaruh sini)
+            const adzanDate = new Date(adzanTimestamp);
+            const timeString = adzanDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            const adzanTimeEl = document.getElementById('adzan-time');
+            if (adzanTimeEl) adzanTimeEl.textContent = timeString;
+
+
+            // --- C. PROGRESS CIRCLE ---
+            const remainingSeconds = Math.max(0, Math.floor(distance / 1000));
+            // Mencegah pembagian nol
+            const safeTotal = totalDuration > 0 ? totalDuration : 1;
+            const progressPercent = (remainingSeconds / safeTotal) * 100;
+
+            // 282.6 adalah keliling lingkaran (sesuaikan dengan r radius SVG Anda)
+            const dashOffset = 282.6 * (1 - progressPercent / 100);
+
+            if (progressFill) {
+                progressFill.style.strokeDashoffset = dashOffset;
+            }
+
+            // --- D. LOGIKA WARNA & BEEP ---
+
+            // Reset kelas warna dulu
+            countdownEl.classList.remove('text-yellow-300', 'text-orange-400', 'text-red-500');
+
+            if (minutes === 0 && seconds <= 30) {
+                // -- KONDISI KRITIS (< 30 detik) --
+                countdownEl.classList.add('text-red-500');
+                if (progressFill) progressFill.setAttribute('stroke', '#ef4444');
+
+                // Bunyi Beep (Hanya 10 detik terakhir)
+                if (seconds <= 10) {
+                    // Cek lastBeepSecond agar tidak 'glitch' (bunyi berulang cepat)
+                    if (seconds !== lastBeepSecond) {
+                        playBeep(880, 100, 0.1);
+                        lastBeepSecond = seconds;
+                    }
+                }
+
+            } else if (minutes === 0) {
+                // -- KONDISI PERINGATAN (< 1 menit) --
+                countdownEl.classList.add('text-orange-400');
+                if (progressFill) progressFill.setAttribute('stroke', '#f97316');
+
+            } else {
+                // -- KONDISI NORMAL --
+                countdownEl.classList.add('text-yellow-300');
+                if (progressFill) progressFill.setAttribute('stroke', '#facc15');
+            }
+
+        }, 100); // Interval 100ms agar animasi lingkaran halus
+
+        // --- 5. CLEANUP ---
+        window.addEventListener('beforeunload', () => {
+            clearInterval(timer);
+            if (audioCtx) {
+                audioCtx.close();
+            }
+        });
+    </script>
+</body>
+
+</html>

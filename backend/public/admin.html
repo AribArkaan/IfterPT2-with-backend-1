@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Admin Panel - Masjid Al-Ikhlas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                z-index: 50;
+                height: 100vh;
+                width: 260px;
+                box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+            }
+
+            .main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+
+            .content-wrapper {
+                padding: 1rem !important;
+            }
+
+            .card {
+                margin-bottom: 1rem;
+            }
+
+            .grid-cols-1 {
+                grid-template-columns: 1fr;
+            }
+
+            .md\\:grid-cols-2,
+            .md\\:grid-cols-3 {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+
+            .p-8 {
+                padding: 1rem;
+            }
+
+            .text-3xl {
+                font-size: 1.5rem;
+            }
+
+            .text-2xl {
+                font-size: 1.25rem;
+            }
+
+            .mobile-menu-btn {
+                display: block !important;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .mobile-menu-btn {
+                display: none !important;
+            }
+
+            .sidebar {
+                transform: translateX(0) !important;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Touch friendly */
+        button,
+        .btn-primary,
+        .tab-btn,
+        [onclick] {
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .tab-btn {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab-btn:active {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Improved table responsiveness */
+        .responsive-table {
+            display: block;
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Better form elements on mobile */
+        @media (max-width: 640px) {
+
+            input,
+            select,
+            textarea,
+            button {
+                font-size: 16px !important;
+                /* Prevents zoom on iOS */
+            }
+
+            .p-6 {
+                padding: 1rem;
+            }
+
+            .space-x-4> :not([hidden])~ :not([hidden]) {
+                margin-left: 0.5rem;
+            }
+
+            .grid {
+                gap: 1rem;
+            }
+        }
+
+        /* Toast notification */
+        #toast {
+            max-width: 90%;
+            word-break: break-word;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50">
+    <!-- Mobile Menu Overlay -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden"
+        onclick="toggleSidebar()">
+    </div>
+
+    <!-- Mobile Menu Button -->
+    <button onclick="toggleSidebar()"
+        class="mobile-menu-btn fixed top-4 left-4 z-50 bg-blue-600 text-white p-3 rounded-lg shadow-lg md:hidden">
+        <i class="fas fa-bars text-xl"></i>
+    </button>
+
+    <div class="flex h-screen relative">
+        <!-- Sidebar -->
+        <div id="sidebar"
+            class="sidebar w-64 text-white p-4 md:p-6 fixed md:relative transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out z-50 overflow-y-auto">
+            <div class="flex justify-between items-center md:block">
+                <div class="mb-6 md:mb-8">
+                    <h1 class="text-xl md:text-2xl font-bold">🕌 Masjid Admin</h1>
+                    <p class="text-blue-200 text-xs md:text-sm">Sistem Digital Masjid</p>
+                </div>
+                <button onclick="toggleSidebar()" class="md:hidden text-white text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <nav class="space-y-1 md:space-y-2">
+                <button onclick="showTab('dashboard')"
+                    class="tab-btn w-full text-left p-2 md:p-3 rounded-lg hover:bg-blue-700 transition flex items-center text-sm md:text-base">
+                    <i class="fas fa-home mr-3 w-5"></i> <span class="flex-1">Dashboard</span>
+                </button>
+                <button onclick="showTab('prayer-times')"
+                    class="tab-btn w-full text-left p-2 md:p-3 rounded-lg hover:bg-blue-700 transition flex items-center text-sm md:text-base">
+                    <i class="fas fa-clock mr-3 w-5"></i> <span class="flex-1">Jadwal Shalat</span>
+                </button>
+                <button onclick="showTab('iqomah')"
+                    class="tab-btn w-full text-left p-2 md:p-3 rounded-lg hover:bg-blue-700 transition flex items-center text-sm md:text-base">
+                    <i class="fas fa-hourglass-half mr-3 w-5"></i> <span class="flex-1">Iqomah</span>
+                </button>
+                <button onclick="showTab('fokus-mode')"
+                    class="tab-btn w-full text-left p-2 md:p-3 rounded-lg hover:bg-blue-700 transition flex items-center text-sm md:text-base">
+                    <i class="fas fa-pray mr-3 w-5"></i> <span class="flex-1">Fokus Mode</span>
+                </button>
+                <button onclick="showTab('running-text')"
+                    class="tab-btn w-full text-left p-2 md:p-3 rounded-lg hover:bg-blue-700 transition flex items-center text-sm md:text-base">
+                    <i class="fas fa-running mr-3 w-5"></i> <span class="flex-1">Running Text</span>
+                </button>
+                <button onclick="showTab('content')"
+                    class="tab-btn w-full text-left p-2 md:p-3 rounded-lg hover:bg-blue-700 transition flex items-center text-sm md:text-base">
+                    <i class="fas fa-images mr-3 w-5"></i> <span class="flex-1">Konten</span>
+                </button>
+                <button onclick="showTab('events')"
+                    class="tab-btn w-full text-left p-2 md:p-3 rounded-lg hover:bg-blue-700 transition flex items-center text-sm md:text-base">
+                    <i class="fas fa-calendar-alt mr-3 w-5"></i> <span class="flex-1">Events</span>
+                </button>
+                <button onclick="showTab('finance')"
+                    class="tab-btn w-full text-left p-2 md:p-3 rounded-lg hover:bg-blue-700 transition flex items-center text-sm md:text-base">
+                    <i class="fas fa-coins mr-3 w-5"></i> <span class="flex-1">Keuangan</span>
+                </button>
+                <button onclick="showTab('settings')"
+                    class="tab-btn w-full text-left p-2 md:p-3 rounded-lg hover:bg-blue-700 transition flex items-center text-sm md:text-base">
+                    <i class="fas fa-cog mr-3 w-5"></i> <span class="flex-1">Settings</span>
+                </button>
+                <button onclick="showTab('manual-time')"
+                    class="tab-btn w-full text-left p-2 md:p-3 rounded-lg hover:bg-blue-700 transition flex items-center text-sm md:text-base">
+                    <i class="fas fa-calendar mr-3 w-5"></i> <span class="flex-1">Waktu Manual</span>
+                </button>
+            </nav>
+
+            <div class="mt-auto pt-4 md:pt-6 border-t border-blue-700">
+                <div class="text-center">
+                    <p class="text-blue-200 text-xs md:text-sm">Status: <span id="connection-status"
+                            class="text-green-400">● Terhubung</span></p>
+                    <button onclick="logout()" class="mt-4 text-red-300 hover:text-red-100 text-xs md:text-sm">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 p-4 md:p-8 overflow-y-auto main-content w-full" id="main-content">
+            <!-- Header -->
+            <div class="mb-6 md:mb-8">
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800" id="page-title">Dashboard Admin</h1>
+                <p class="text-sm md:text-base text-gray-600">Kelola sistem digital masjid secara real-time</p>
+            </div>
+
+            <!-- Tab Contents -->
+            <div id="tab-contents">
+                <!-- Dashboard -->
+                <div id="dashboard" class="tab-content active">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+                        <div class="card p-4 md:p-6">
+                            <h3 class="text-base md:text-lg font-semibold text-gray-700 mb-3 md:mb-4">
+                                <i class="fas fa-clock text-blue-500 mr-2"></i> Shalat Berikutnya
+                            </h3>
+                            <p id="next-prayer-info" class="text-xl md:text-2xl font-bold text-gray-800">Memuat...</p>
+                            <p class="text-gray-500 text-xs md:text-sm" id="next-prayer-time"></p>
+                        </div>
+                        <div class="card p-4 md:p-6">
+                            <h3 class="text-base md:text-lg font-semibold text-gray-700 mb-3 md:mb-4">
+                                <i class="fas fa-calendar text-green-500 mr-2"></i> Event Terdekat
+                            </h3>
+                            <p id="next-event" class="text-xl md:text-2xl font-bold text-gray-800">Memuat...</p>
+                            <p class="text-gray-500 text-xs md:text-sm" id="event-days"></p>
+                        </div>
+                        <div class="card p-4 md:p-6 sm:col-span-2 lg:col-span-1">
+                            <h3 class="text-base md:text-lg font-semibold text-gray-700 mb-3 md:mb-4">
+                                <i class="fas fa-coins text-yellow-500 mr-2"></i> Keuangan Hari Ini
+                            </h3>
+                            <p id="finance-today" class="text-xl md:text-2xl font-bold text-gray-800">Memuat...</p>
+                            <p class="text-gray-500 text-xs md:text-sm">Update real-time</p>
+                        </div>
+                    </div>
+
+                    <div class="card p-4 md:p-6">
+                        <h3 class="text-base md:text-lg font-semibold text-gray-700 mb-4">Preview Halaman Utama</h3>
+                        <div class="bg-gray-900 p-2 md:p-4 rounded-lg">
+                            <iframe src="/"
+                                class="w-full h-[300px] md:h-[400px] lg:h-[500px] rounded border border-gray-700"
+                                id="preview-frame"></iframe>
+                        </div>
+                        <div class="mt-4 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                            <button onclick="refreshPreview()" class="btn-primary text-sm md:text-base">
+                                <i class="fas fa-sync mr-2"></i> Refresh Preview
+                            </button>
+                            <button onclick="openFullPreview()"
+                                class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 text-sm md:text-base">
+                                <i class="fas fa-external-link-alt mr-2"></i> Buka di Tab Baru
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Jadwal Shalat -->
+                <div id="prayer-times" class="tab-content">
+                    <div class="card p-4 md:p-6">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 md:mb-6">Kelola Jadwal Shalat</h3>
+
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2 text-sm md:text-base">Sumber Jadwal:</label>
+                            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                                <button onclick="fetchFromAPI()" class="btn-primary text-sm md:text-base">
+                                    <i class="fas fa-sync mr-2"></i> Ambil dari API Aladhan
+                                </button>
+                                <button onclick="showManualInput()"
+                                    class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 text-sm md:text-base">
+                                    <i class="fas fa-edit mr-2"></i> Input Manual
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="manual-input" class="hidden mb-6">
+                            <h4 class="text-base md:text-lg font-semibold mb-4">Input Manual Jadwal Shalat</h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div class="p-3 md:p-4 border rounded-lg">
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Subuh</label>
+                                    <input type="time" id="time-subuh"
+                                        class="w-full p-2 border rounded text-sm md:text-base" value="04:15">
+                                </div>
+                                <div class="p-3 md:p-4 border rounded-lg">
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Terbit</label>
+                                    <input type="time" id="time-terbit"
+                                        class="w-full p-2 border rounded text-sm md:text-base" value="05:30">
+                                </div>
+                                <div class="p-3 md:p-4 border rounded-lg">
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Dzuhur</label>
+                                    <input type="time" id="time-dzuhur"
+                                        class="w-full p-2 border rounded text-sm md:text-base" value="11:45">
+                                </div>
+                                <div class="p-3 md:p-4 border rounded-lg">
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Ashar</label>
+                                    <input type="time" id="time-ashar"
+                                        class="w-full p-2 border rounded text-sm md:text-base" value="15:00">
+                                </div>
+                                <div class="p-3 md:p-4 border rounded-lg">
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Maghrib</label>
+                                    <input type="time" id="time-maghrib"
+                                        class="w-full p-2 border rounded text-sm md:text-base" value="17:50">
+                                </div>
+                                <div class="p-3 md:p-4 border rounded-lg">
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Isya</label>
+                                    <input type="time" id="time-isya"
+                                        class="w-full p-2 border rounded text-sm md:text-base" value="19:05">
+                                </div>
+                            </div>
+                            <button onclick="saveManualTimes()" class="mt-4 btn-primary text-sm md:text-base">
+                                <i class="fas fa-save mr-2"></i> Simpan Jadwal Manual
+                            </button>
+                        </div>
+
+                        <div id="api-result" class="mb-6"></div>
+
+                        <div class="responsive-table">
+                            <table class="w-full border-collapse min-w-[600px]">
+                                <thead>
+                                    <tr class="bg-gray-100">
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Shalat</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Waktu</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="prayer-table">
+                                    <!-- Data akan diisi oleh JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Iqomah Settings -->
+                <div id="iqomah" class="tab-content">
+                    <div class="card p-4 md:p-6">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 md:mb-6">Pengaturan Waktu Iqomah</h3>
+                        <p class="text-sm md:text-base text-gray-600 mb-4 md:mb-6">Atur berapa menit setelah adzan untuk
+                            iqomah tiap shalat</p>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                            <div class="p-3 md:p-4 border rounded-lg">
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">Subuh</label>
+                                <div class="flex items-center">
+                                    <input type="number" id="iqomah-subuh"
+                                        class="w-20 md:w-24 p-2 border rounded text-sm md:text-base" value="10" min="1"
+                                        max="30">
+                                    <span class="ml-2 text-gray-600 text-sm md:text-base">menit</span>
+                                </div>
+                            </div>
+                            <div class="p-3 md:p-4 border rounded-lg">
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">Dzuhur</label>
+                                <div class="flex items-center">
+                                    <input type="number" id="iqomah-dzuhur"
+                                        class="w-20 md:w-24 p-2 border rounded text-sm md:text-base" value="10" min="1"
+                                        max="30">
+                                    <span class="ml-2 text-gray-600 text-sm md:text-base">menit</span>
+                                </div>
+                            </div>
+                            <div class="p-3 md:p-4 border rounded-lg">
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">Ashar</label>
+                                <div class="flex items-center">
+                                    <input type="number" id="iqomah-ashar"
+                                        class="w-20 md:w-24 p-2 border rounded text-sm md:text-base" value="10" min="1"
+                                        max="30">
+                                    <span class="ml-2 text-gray-600 text-sm md:text-base">menit</span>
+                                </div>
+                            </div>
+                            <div class="p-3 md:p-4 border rounded-lg">
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">Maghrib</label>
+                                <div class="flex items-center">
+                                    <input type="number" id="iqomah-maghrib"
+                                        class="w-20 md:w-24 p-2 border rounded text-sm md:text-base" value="10" min="1"
+                                        max="30">
+                                    <span class="ml-2 text-gray-600 text-sm md:text-base">menit</span>
+                                </div>
+                            </div>
+                            <div class="p-3 md:p-4 border rounded-lg">
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">Isya</label>
+                                <div class="flex items-center">
+                                    <input type="number" id="iqomah-isya"
+                                        class="w-20 md:w-24 p-2 border rounded text-sm md:text-base" value="10" min="1"
+                                        max="30">
+                                    <span class="ml-2 text-gray-600 text-sm md:text-base">menit</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onclick="saveIqomahSettings()" class="mt-6 btn-primary text-sm md:text-base">
+                            <i class="fas fa-save mr-2"></i> Simpan Pengaturan Iqomah
+                        </button>
+                    </div>
+
+
+                    <!-- RUNNING TEXT UNTUK IQOMAH MODE -->
+                    <div class="card p-4 md:p-6 mt-6">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 md:mb-6">
+                            <i class="fas fa-scroll text-amber-600 mr-2"></i>Running Text Iqomah Mode
+                        </h3>
+                        <p class="text-sm md:text-base text-gray-600 mb-4">
+                            Atur teks berjalan yang akan ditampilkan di bagian bawah halaman Iqomah Mode.
+                            Teks ini akan muncul saat countdown iqomah berlangsung.
+                        </p>
+
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2 text-sm md:text-base font-medium">
+                                <i class="fas fa-edit mr-1 text-blue-500"></i>Teks Berjalan (pisahkan dengan enter untuk
+                                multiple teks):
+                            </label>
+                            <textarea id="iqomah-running-text-content" rows="4"
+                                class="w-full p-3 border rounded-lg text-sm md:text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Contoh:&#10;🔊 Mohon tenang, matikan HP atau mode silent&#10;⭐ Rapatkan dan luruskan shaf&#10;📿 Semoga ibadah kita diterima Allah SWT"></textarea>
+                            <p class="text-gray-500 text-xs md:text-sm mt-2">
+                                <i class="fas fa-info-circle mr-1"></i>Setiap baris akan menjadi teks terpisah yang
+                                bergantian secara otomatis
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-6">
+                            <div>
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">
+                                    <i class="fas fa-font mr-1 text-purple-500"></i>Jenis Font:
+                                </label>
+                                <select id="iqomah-running-font" class="w-full p-2 border rounded text-sm md:text-base">
+                                    <option value="Inter">Inter</option>
+                                    <option value="Poppins">Poppins</option>
+                                    <option value="Amiri">Amiri (Arabic)</option>
+                                    <option value="Arial">Arial</option>
+                                    <option value="Helvetica">Helvetica</option>
+                                    <option value="Verdana">Verdana</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">
+                                    <i class="fas fa-text-height mr-1 text-green-500"></i>Ukuran Font (px):
+                                </label>
+                                <input type="number" id="iqomah-running-font-size"
+                                    class="w-full p-2 border rounded text-sm md:text-base" value="16" min="12" max="48">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">
+                                    <i class="fas fa-tachometer-alt mr-1 text-orange-500"></i>Kecepatan (detik):
+                                </label>
+                                <input type="number" id="iqomah-running-speed"
+                                    class="w-full p-2 border rounded text-sm md:text-base" value="30" min="10" max="60">
+                                <p class="text-gray-500 text-xs mt-1">Waktu untuk satu siklus lengkap</p>
+                            </div>
+                        </div>
+
+                        <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <h4 class="font-semibold mb-3 text-sm md:text-base text-gray-700">
+                                <i class="fas fa-eye mr-1 text-blue-500"></i>Preview Running Text:
+                            </h4>
+                            <div id="iqomah-running-text-preview"
+                                class="bg-gradient-to-r from-[#faf3e8] to-[#f5e6d3] text-[#6b4f3a] p-3 rounded-lg overflow-hidden border border-[#e5d5c0]">
+                                <div class="whitespace-nowrap overflow-x-auto font-medium" id="iqomah-preview-text">
+                                    Preview teks akan muncul di sini...
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <button onclick="saveIqomahRunningText()" class="btn-primary text-sm md:text-base flex-1">
+                                <i class="fas fa-save mr-2"></i> Simpan Running Text Iqomah
+                            </button>
+                            <button onclick="resetIqomahRunningText()"
+                                class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 text-sm md:text-base">
+                                <i class="fas fa-undo mr-2"></i> Reset ke Default
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- fokus mode setting -->
+
+                <div id="fokus-mode" class="tab-content">
+                    <div class="card p-4 md:p-6">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 md:mb-6">Pengaturan Durasi Fokus
+                            Mode</h3>
+                        <p class="text-sm md:text-base text-gray-600 mb-4 md:mb-6">Atur berapa lama layar Fokus Mode
+                            (saat sedang shalat) ditayangkan sebelum kembali ke halaman utama.</p>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                            <div class="p-3 md:p-4 border rounded-lg">
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">Subuh</label>
+                                <div class="flex items-center">
+                                    <input type="number" id="fokus-subuh"
+                                        class="w-20 md:w-24 p-2 border rounded text-sm md:text-base" value="10" min="1"
+                                        max="60">
+                                    <span class="ml-2 text-gray-600 text-sm md:text-base">menit</span>
+                                </div>
+                            </div>
+                            <div class="p-3 md:p-4 border rounded-lg">
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">Dzuhur</label>
+                                <div class="flex items-center">
+                                    <input type="number" id="fokus-dzuhur"
+                                        class="w-20 md:w-24 p-2 border rounded text-sm md:text-base" value="10" min="1"
+                                        max="60">
+                                    <span class="ml-2 text-gray-600 text-sm md:text-base">menit</span>
+                                </div>
+                            </div>
+                            <div class="p-3 md:p-4 border rounded-lg">
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">Ashar</label>
+                                <div class="flex items-center">
+                                    <input type="number" id="fokus-ashar"
+                                        class="w-20 md:w-24 p-2 border rounded text-sm md:text-base" value="10" min="1"
+                                        max="60">
+                                    <span class="ml-2 text-gray-600 text-sm md:text-base">menit</span>
+                                </div>
+                            </div>
+                            <div class="p-3 md:p-4 border rounded-lg">
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">Maghrib</label>
+                                <div class="flex items-center">
+                                    <input type="number" id="fokus-maghrib"
+                                        class="w-20 md:w-24 p-2 border rounded text-sm md:text-base" value="10" min="1"
+                                        max="60">
+                                    <span class="ml-2 text-gray-600 text-sm md:text-base">menit</span>
+                                </div>
+                            </div>
+                            <div class="p-3 md:p-4 border rounded-lg">
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">Isya</label>
+                                <div class="flex items-center">
+                                    <input type="number" id="fokus-isya"
+                                        class="w-20 md:w-24 p-2 border rounded text-sm md:text-base" value="10" min="1"
+                                        max="60">
+                                    <span class="ml-2 text-gray-600 text-sm md:text-base">menit</span>
+                                </div>
+                            </div>
+                            <div class="p-3 md:p-4 border rounded-lg">
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">Jumat
+                                    (Opsional)</label>
+                                <div class="flex items-center">
+                                    <input type="number" id="fokus-jumat"
+                                        class="w-20 md:w-24 p-2 border rounded text-sm md:text-base" value="30" min="1"
+                                        max="60">
+                                    <span class="ml-2 text-gray-600 text-sm md:text-base">menit</span>
+                                </div>
+                            </div>
+                            <div class="p-3 md:p-4 border rounded-lg bg-purple-50">
+                                <label class="block text-purple-800 mb-2 text-sm md:text-base font-semibold">Tarawih
+                                    (Otomatis Ramadhan)</label>
+                                <div class="flex items-center">
+                                    <input type="number" id="fokus-tarawih"
+                                        class="w-20 md:w-24 p-2 border rounded text-sm md:text-base border-purple-300"
+                                        value="45" min="1" max="120">
+                                    <span class="ml-2 text-gray-600 text-sm md:text-base">menit</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onclick="saveFokusSettings()" class="mt-6 btn-primary text-sm md:text-base">
+                            <i class="fas fa-save mr-2"></i> Simpan Pengaturan Fokus
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Running Text -->
+                <div id="running-text" class="tab-content">
+                    <div class="card p-4 md:p-6">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 md:mb-6">Pengaturan Running Text</h3>
+
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2 text-sm md:text-base">Teks Berjalan (pisahkan dengan
+                                enter):</label>
+                            <textarea id="running-text-content" rows="4"
+                                class="w-full p-2 md:p-3 border rounded-lg text-sm md:text-base"
+                                placeholder="Masukkan teks untuk running text..."></textarea>
+                            <p class="text-gray-500 text-xs md:text-sm mt-2">Setiap baris akan menjadi teks terpisah
+                                yang bergantian</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
+                            <div>
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">Jenis Font:</label>
+                                <select id="running-font" class="w-full p-2 border rounded text-sm md:text-base">
+                                    <option value="Inter">Inter</option>
+                                    <option value="Arial">Arial</option>
+                                    <option value="Helvetica">Helvetica</option>
+                                    <option value="Times New Roman">Times New Roman</option>
+                                    <option value="Verdana">Verdana</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">Ukuran Font (px):</label>
+                                <input type="number" id="running-font-size"
+                                    class="w-full p-2 border rounded text-sm md:text-base" value="16" min="12" max="48">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 mb-2 text-sm md:text-base">Kecepatan (detik):</label>
+                                <input type="number" id="running-speed"
+                                    class="w-full p-2 border rounded text-sm md:text-base" value="30" min="10" max="60">
+                                <p class="text-gray-500 text-xs mt-1">Waktu untuk satu siklus lengkap</p>
+                            </div>
+                        </div>
+
+                        <div class="mb-6 p-3 md:p-4 bg-gray-100 rounded-lg">
+                            <h4 class="font-semibold mb-2 text-sm md:text-base">Preview:</h4>
+                            <div id="running-text-preview"
+                                class="bg-gray-900 text-white p-2 md:p-3 rounded overflow-hidden">
+                                <div class="whitespace-nowrap overflow-x-auto" id="preview-text"></div>
+                            </div>
+                        </div>
+
+                        <button onclick="saveRunningText()" class="btn-primary text-sm md:text-base">
+                            <i class="fas fa-save mr-2"></i> Simpan Running Text
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Content Management -->
+                <div id="content" class="tab-content">
+                    <div class="card p-4 md:p-6">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 md:mb-6">Manajemen Konten</h3>
+
+                        <div class="mb-6">
+                            <button onclick="showUploadForm()" class="btn-primary text-sm md:text-base">
+                                <i class="fas fa-plus mr-2"></i> Tambah Konten Baru
+                            </button>
+                        </div>
+
+                        <div id="upload-form" class="hidden mb-6 p-4 md:p-6 border rounded-lg bg-gray-50">
+                            <h4 class="text-base md:text-lg font-semibold mb-4">Upload Konten Baru</h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Judul:</label>
+                                    <input type="text" id="content-title"
+                                        class="w-full p-2 border rounded text-sm md:text-base"
+                                        placeholder="Contoh: Pengumuman Jumat">
+
+                                    <!-- Ukuran Font Judul (untuk pengumuman) -->
+                                    <div id="title-font-size-container" class="mt-2 hidden">
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Ukuran Font
+                                            Judul:</label>
+                                        <div class="flex items-center space-x-2">
+                                            <input type="range" id="title-font-size" class="flex-1" min="12" max="72"
+                                                value="24">
+                                            <input type="number" id="title-font-size-input"
+                                                class="w-20 p-2 border rounded text-sm" value="24" min="12" max="72">
+                                            <span class="text-sm text-gray-600">px</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Deskripsi:</label>
+                                    <textarea id="content-description" rows="2"
+                                        class="w-full p-2 border rounded text-sm md:text-base"
+                                        placeholder="Deskripsi singkat..."></textarea>
+
+                                    <!-- Ukuran Font Deskripsi (untuk pengumuman) -->
+                                    <div id="desc-font-size-container" class="mt-2 hidden">
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Ukuran Font
+                                            Deskripsi:</label>
+                                        <div class="flex items-center space-x-2">
+                                            <input type="range" id="desc-font-size" class="flex-1" min="12" max="48"
+                                                value="16">
+                                            <input type="number" id="desc-font-size-input"
+                                                class="w-20 p-2 border rounded text-sm" value="16" min="12" max="48">
+                                            <span class="text-sm text-gray-600">px</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Tipe:</label>
+                                    <select id="content-type" class="w-full p-2 border rounded text-sm md:text-base">
+                                        <option value="image">Gambar</option>
+                                        <option value="video">Video</option>
+                                        <option value="announcement">Pengumuman</option>
+                                    </select>
+                                </div>
+
+                                <!-- File Upload Section (untuk Image & Video) -->
+                                <div id="file-upload-section">
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">File:</label>
+                                    <input type="file" id="content-file"
+                                        class="w-full p-2 border rounded text-sm md:text-base" accept="image/*,video/*">
+                                    <p class="text-gray-500 text-xs mt-1">Unggah file gambar atau video</p>
+                                </div>
+
+                                <!-- Announcement Settings Section -->
+                                <div id="announcement-settings"
+                                    class="hidden p-3 md:p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <h5 class="font-semibold text-blue-800 mb-3 md:mb-4 text-sm md:text-base">
+                                        <i class="fas fa-cog mr-2"></i>Pengaturan Pengumuman
+                                    </h5>
+
+                                    <div class="mb-4">
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Isi
+                                            Pengumuman:</label>
+                                        <textarea id="announcement-text" rows="4"
+                                            class="w-full p-2 md:p-3 border rounded text-sm md:text-base"
+                                            placeholder="Tulis pengumuman di sini..."></textarea>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4">
+                                        <div>
+                                            <label class="block text-gray-700 mb-2 text-sm md:text-base">
+                                                <i class="fas fa-font mr-1"></i>Jenis Font:
+                                            </label>
+                                            <select id="announcement-font"
+                                                class="w-full p-2 border rounded text-sm md:text-base">
+                                                <option value="Inter">Inter</option>
+                                                <option value="Arial">Arial</option>
+                                                <option value="Helvetica">Helvetica</option>
+                                                <option value="Times New Roman">Times New Roman</option>
+                                                <option value="Georgia">Georgia</option>
+                                                <option value="Verdana">Verdana</option>
+                                                <option value="Courier New">Courier New</option>
+                                                <option value="Comic Sans MS">Comic Sans MS</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-gray-700 mb-2 text-sm md:text-base">
+                                                <i class="fas fa-palette mr-1"></i>Warna Teks:
+                                            </label>
+                                            <div class="flex space-x-2">
+                                                <input type="color" id="announcement-color"
+                                                    class="w-12 md:w-16 h-9 md:h-10 border rounded cursor-pointer"
+                                                    value="#000000">
+                                                <input type="text" id="announcement-color-hex"
+                                                    class="flex-1 p-2 border rounded text-sm md:text-base"
+                                                    value="#000000" placeholder="#000000">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-gray-700 mb-2 text-sm md:text-base">
+                                                <i class="fas fa-fill-drip mr-1"></i>Warna Background:
+                                            </label>
+                                            <div class="flex space-x-2">
+                                                <input type="color" id="announcement-bg-color"
+                                                    class="w-12 md:w-16 h-9 md:h-10 border rounded cursor-pointer"
+                                                    value="#ffffff">
+                                                <input type="text" id="announcement-bg-color-hex"
+                                                    class="flex-1 p-2 border rounded text-sm md:text-base"
+                                                    value="#ffffff" placeholder="#ffffff">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">
+                                            <i class="fas fa-bold mr-1"></i>Gaya Font:
+                                        </label>
+                                        <div class="flex flex-wrap gap-2">
+                                            <label
+                                                class="inline-flex items-center px-3 md:px-4 py-2 border rounded cursor-pointer hover:bg-blue-100 text-sm">
+                                                <input type="checkbox" id="announcement-bold" class="mr-2">
+                                                <i class="fas fa-bold mr-1"></i> Bold
+                                            </label>
+                                            <label
+                                                class="inline-flex items-center px-3 md:px-4 py-2 border rounded cursor-pointer hover:bg-blue-100 text-sm">
+                                                <input type="checkbox" id="announcement-italic" class="mr-2">
+                                                <i class="fas fa-italic mr-1"></i> Italic
+                                            </label>
+                                            <label
+                                                class="inline-flex items-center px-3 md:px-4 py-2 border rounded cursor-pointer hover:bg-blue-100 text-sm">
+                                                <input type="checkbox" id="announcement-underline" class="mr-2">
+                                                <i class="fas fa-underline mr-1"></i> Underline
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">
+                                            <i class="fas fa-align-left mr-1"></i>Perataan Teks:
+                                        </label>
+                                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                            <label class="flex-1">
+                                                <input type="radio" name="text-align" value="left" class="hidden peer"
+                                                    checked>
+                                                <div
+                                                    class="p-2 md:p-3 border rounded text-center cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white hover:bg-blue-100 text-xs md:text-sm">
+                                                    <i class="fas fa-align-left"></i>
+                                                    <div class="text-xs mt-1 hidden sm:block">Kiri</div>
+                                                </div>
+                                            </label>
+                                            <label class="flex-1">
+                                                <input type="radio" name="text-align" value="center"
+                                                    class="hidden peer">
+                                                <div
+                                                    class="p-2 md:p-3 border rounded text-center cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white hover:bg-blue-100 text-xs md:text-sm">
+                                                    <i class="fas fa-align-center"></i>
+                                                    <div class="text-xs mt-1 hidden sm:block">Tengah</div>
+                                                </div>
+                                            </label>
+                                            <label class="flex-1">
+                                                <input type="radio" name="text-align" value="right" class="hidden peer">
+                                                <div
+                                                    class="p-2 md:p-3 border rounded text-center cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white hover:bg-blue-100 text-xs md:text-sm">
+                                                    <i class="fas fa-align-right"></i>
+                                                    <div class="text-xs mt-1 hidden sm:block">Kanan</div>
+                                                </div>
+                                            </label>
+                                            <label class="flex-1">
+                                                <input type="radio" name="text-align" value="justify"
+                                                    class="hidden peer">
+                                                <div
+                                                    class="p-2 md:p-3 border rounded text-center cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white hover:bg-blue-100 text-xs md:text-sm">
+                                                    <i class="fas fa-align-justify"></i>
+                                                    <div class="text-xs mt-1 hidden sm:block">Rata</div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">
+                                            <i class="fas fa-arrows-alt mr-1"></i>Posisi Konten:
+                                        </label>
+                                        <div class="grid grid-cols-3 gap-1 md:gap-2">
+                                            <label>
+                                                <input type="radio" name="content-position" value="top-left"
+                                                    class="hidden peer">
+                                                <div
+                                                    class="p-2 border rounded text-center cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white hover:bg-blue-100 text-xs">
+                                                    <i class="fas fa-arrow-up"></i>
+                                                    <i class="fas fa-arrow-left"></i>
+                                                </div>
+                                            </label>
+                                            <label>
+                                                <input type="radio" name="content-position" value="top-center"
+                                                    class="hidden peer">
+                                                <div
+                                                    class="p-2 border rounded text-center cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white hover:bg-blue-100 text-xs">
+                                                    <i class="fas fa-arrow-up"></i>
+                                                </div>
+                                            </label>
+                                            <label>
+                                                <input type="radio" name="content-position" value="top-right"
+                                                    class="hidden peer">
+                                                <div
+                                                    class="p-2 border rounded text-center cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white hover:bg-blue-100 text-xs">
+                                                    <i class="fas fa-arrow-up"></i>
+                                                    <i class="fas fa-arrow-right"></i>
+                                                </div>
+                                            </label>
+                                            <label>
+                                                <input type="radio" name="content-position" value="middle-left"
+                                                    class="hidden peer">
+                                                <div
+                                                    class="p-2 border rounded text-center cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white hover:bg-blue-100 text-xs">
+                                                    <i class="fas fa-arrow-left"></i>
+                                                </div>
+                                            </label>
+                                            <label>
+                                                <input type="radio" name="content-position" value="center"
+                                                    class="hidden peer" checked>
+                                                <div
+                                                    class="p-2 border rounded text-center cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white hover:bg-blue-100 text-xs">
+                                                    <i class="fas fa-compress"></i>
+                                                </div>
+                                            </label>
+                                            <label>
+                                                <input type="radio" name="content-position" value="middle-right"
+                                                    class="hidden peer">
+                                                <div
+                                                    class="p-2 border rounded text-center cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white hover:bg-blue-100 text-xs">
+                                                    <i class="fas fa-arrow-right"></i>
+                                                </div>
+                                            </label>
+                                            <label>
+                                                <input type="radio" name="content-position" value="bottom-left"
+                                                    class="hidden peer">
+                                                <div
+                                                    class="p-2 border rounded text-center cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white hover:bg-blue-100 text-xs">
+                                                    <i class="fas fa-arrow-down"></i>
+                                                    <i class="fas fa-arrow-left"></i>
+                                                </div>
+                                            </label>
+                                            <label>
+                                                <input type="radio" name="content-position" value="bottom-center"
+                                                    class="hidden peer">
+                                                <div
+                                                    class="p-2 border rounded text-center cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white hover:bg-blue-100 text-xs">
+                                                    <i class="fas fa-arrow-down"></i>
+                                                </div>
+                                            </label>
+                                            <label>
+                                                <input type="radio" name="content-position" value="bottom-right"
+                                                    class="hidden peer">
+                                                <div
+                                                    class="p-2 border rounded text-center cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white hover:bg-blue-100 text-xs">
+                                                    <i class="fas fa-arrow-down"></i>
+                                                    <i class="fas fa-arrow-right"></i>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">
+                                            <i class="fas fa-adjust mr-1"></i>Transparansi BG (%):
+                                        </label>
+                                        <input type="range" id="announcement-bg-opacity" class="w-full" min="0"
+                                            max="100" value="100" oninput="updateOpacityValue(this.value)">
+                                        <div class="text-center text-xs md:text-sm text-gray-600">
+                                            <span id="opacity-value">100</span>%
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">
+                                            <i class="fas fa-eye mr-1"></i>Preview:
+                                        </label>
+                                        <div id="announcement-preview"
+                                            class="w-full h-40 md:h-48 border-2 border-dashed border-gray-300 rounded-lg overflow-auto p-4"
+                                            style="background: white;">
+                                            <p class="text-gray-400 italic text-sm md:text-base">Preview pengumuman akan
+                                                muncul di sini</p>
+                                        </div>
+                                    </div>
+
+                                    <button onclick="updateAnnouncementPreview()"
+                                        class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-sm md:text-base">
+                                        <i class="fas fa-sync mr-2"></i> Update Preview
+                                    </button>
+                                </div>
+
+                                <div>
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Urutan
+                                        Tampilan:</label>
+                                    <input type="number" id="content-order"
+                                        class="w-full p-2 border rounded text-sm md:text-base" value="0">
+                                    <p class="text-gray-500 text-xs mt-1">Angka lebih kecil akan ditampilkan lebih awal
+                                    </p>
+                                </div>
+
+                                <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                                    <button onclick="uploadContent()" class="btn-primary text-sm md:text-base">
+                                        <i class="fas fa-upload mr-2"></i> Simpan Konten
+                                    </button>
+                                    <button onclick="hideUploadForm()"
+                                        class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 text-sm md:text-base">
+                                        Batal
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="responsive-table">
+                            <table class="w-full border-collapse min-w-[600px]">
+                                <thead>
+                                    <tr class="bg-gray-100">
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Judul</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Tipe</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Preview</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Urutan</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Status</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="content-table">
+                                    <!-- Data akan diisi oleh JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Events Management -->
+                <div id="events" class="tab-content">
+                    <div class="card p-4 md:p-6">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 md:mb-6">Manajemen Event Keagamaan
+                        </h3>
+
+                        <!-- Toolbar -->
+                        <div class="mb-6 flex flex-wrap gap-3 items-center justify-between">
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="showEventForm()" class="btn-primary text-sm md:text-base">
+                                    <i class="fas fa-plus mr-2"></i> Tambah Event Baru
+                                </button>
+                                <button onclick="refreshEvents()"
+                                    class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 text-sm md:text-base">
+                                    <i class="fas fa-sync mr-2"></i> Refresh
+                                </button>
+                            </div>
+
+                            <!-- Filter dan Pencarian -->
+                            <div class="flex flex-wrap gap-2">
+                                <select id="event-filter-status" class="p-2 border rounded text-sm">
+                                    <option value="all">Semua Status</option>
+                                    <option value="active">Aktif</option>
+                                    <option value="inactive">Nonaktif</option>
+                                </select>
+                                <div class="relative">
+                                    <input type="text" id="event-search" placeholder="Cari event..."
+                                        class="pl-8 pr-4 py-2 border rounded text-sm w-48">
+                                    <i class="fas fa-search absolute left-2 top-3 text-gray-400 text-sm"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Tambah/Edit Event -->
+                        <div id="event-form" class="hidden mb-6 p-4 md:p-6 border rounded-lg bg-gray-50">
+                            <h4 class="text-base md:text-lg font-semibold mb-4" id="event-form-title">Tambah Event Baru
+                            </h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Judul Event:</label>
+                                    <input type="text" id="event-title" maxlength="255"
+                                        class="w-full p-2 border rounded text-sm md:text-base"
+                                        placeholder="Contoh: Maulid Nabi Muhammad SAW">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Deskripsi:</label>
+                                    <textarea id="event-description" rows="3" maxlength="500"
+                                        class="w-full p-2 border rounded text-sm md:text-base"
+                                        placeholder="Deskripsi event..."></textarea>
+                                    <div class="text-right text-xs text-gray-400 mt-1">
+                                        <span id="desc-counter">0</span>/500
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Tanggal Target:</label>
+                                    <input type="date" id="event-date"
+                                        class="w-full p-2 border rounded text-sm md:text-base">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Status:</label>
+                                    <select id="event-is-active" class="w-full p-2 border rounded text-sm md:text-base">
+                                        <option value="1">Aktif</option>
+                                        <option value="0">Nonaktif</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <button onclick="saveEvent()" class="btn-primary text-sm md:text-base">
+                                        <i class="fas fa-save mr-2"></i> Simpan
+                                    </button>
+                                    <button onclick="resetEventForm()"
+                                        class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 text-sm md:text-base">
+                                        <i class="fas fa-undo mr-2"></i> Reset
+                                    </button>
+                                    <button onclick="hideEventForm()"
+                                        class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 text-sm md:text-base">
+                                        Batal
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Loading Indicator -->
+                        <div id="events-loading" class="text-center py-8 hidden">
+                            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600">
+                            </div>
+                            <p class="mt-2 text-gray-500">Memuat data...</p>
+                        </div>
+
+                        <!-- Tabel Events -->
+                        <div class="responsive-table">
+                            <table class="w-full border-collapse min-w-[700px]">
+                                <thead>
+                                    <tr class="bg-gray-100">
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base w-16">No</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Event</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Tanggal</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Sisa Hari</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Status</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="events-table">
+                                    <!-- Data akan diisi oleh JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination (opsional) -->
+                        <div class="mt-4 flex items-center justify-between">
+                            <p class="text-sm text-gray-500">Total: <span id="event-total">0</span> event</p>
+                            <div class="flex gap-2">
+                                <button class="px-3 py-1 border rounded text-sm disabled:opacity-50"
+                                    disabled>Prev</button>
+                                <span class="px-3 py-1">1</span>
+                                <button class="px-3 py-1 border rounded text-sm disabled:opacity-50"
+                                    disabled>Next</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Finance Management -->
+                <div id="finance" class="tab-content">
+                    <div class="card p-4 md:p-6">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 md:mb-6">Manajemen Keuangan
+                            Masjid</h3>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+                            <div class="p-4 md:p-6 bg-blue-50 rounded-lg">
+                                <h4 class="text-base md:text-lg font-semibold text-blue-700 mb-2">Saldo Saat Ini
+                                </h4>
+                                <p id="current-balance" class="text-xl md:text-3xl font-bold text-blue-800">Rp 0</p>
+                            </div>
+                            <div class="p-4 md:p-6 bg-green-50 rounded-lg">
+                                <h4 class="text-base md:text-lg font-semibold text-green-700 mb-2">Total Pemasukan
+                                </h4>
+                                <p id="total-income" class="text-xl md:text-3xl font-bold text-green-800">Rp 0</p>
+                            </div>
+                            <div class="p-4 md:p-6 bg-red-50 rounded-lg sm:col-span-2 lg:col-span-1">
+                                <h4 class="text-base md:text-lg font-semibold text-red-700 mb-2">Total Pengeluaran
+                                </h4>
+                                <p id="total-expense" class="text-xl md:text-3xl font-bold text-red-800">Rp 0</p>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <button onclick="showTransactionForm()" class="btn-primary text-sm md:text-base">
+                                <i class="fas fa-plus mr-2"></i> Tambah Transaksi
+                            </button>
+                            <button onclick="exportFinanceToExcel()"
+                                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm md:text-base ml-2">
+                                <i class="fas fa-file-excel mr-2"></i> Export Excel
+                            </button>
+                        </div>
+
+                        <div class="mb-6 p-4 bg-white border rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="text-base md:text-lg font-semibold text-gray-800 mb-1">
+                                        <i class="fas fa-tv mr-2 text-purple-500"></i> Tampilan Display
+                                    </h4>
+                                    <p class="text-sm text-gray-600">Atur apakah informasi keuangan ditampilkan di
+                                        halaman display utama</p>
+                                </div>
+                                <div class="flex items-center">
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="finance-display-toggle" class="sr-only peer"
+                                            onchange="toggleFinanceDisplay()">
+                                        <div
+                                            class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600">
+                                        </div>
+                                        <span class="ms-3 text-sm font-medium text-gray-700"
+                                            id="finance-toggle-label">Aktif</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="transaction-form" class="hidden mb-6 p-4 md:p-6 border rounded-lg bg-gray-50">
+                            <h4 class="text-base md:text-lg font-semibold mb-4">Tambah Transaksi Baru</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Tipe:</label>
+                                    <select id="transaction-type"
+                                        class="w-full p-2 border rounded text-sm md:text-base">
+                                        <option value="masuk">Pemasukan</option>
+                                        <option value="keluar">Pengeluaran</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Kategori:</label>
+                                    <input type="text" id="transaction-category"
+                                        class="w-full p-2 border rounded text-sm md:text-base"
+                                        placeholder="Contoh: Infaq Jumat">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Jumlah
+                                        (Rp):</label>
+                                    <input type="number" id="transaction-amount"
+                                        class="w-full p-2 border rounded text-sm md:text-base" placeholder="1000000">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Tanggal:</label>
+                                    <input type="date" id="transaction-date"
+                                        class="w-full p-2 border rounded text-sm md:text-base"
+                                        value="<?= date('Y-m-d'); ?>">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-gray-700 mb-2 text-sm md:text-base">Deskripsi:</label>
+                                    <textarea id="transaction-description" rows="2"
+                                        class="w-full p-2 border rounded text-sm md:text-base"
+                                        placeholder="Keterangan transaksi..."></textarea>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                                <button onclick="saveTransaction()" class="btn-primary text-sm md:text-base">
+                                    <i class="fas fa-save mr-2"></i> Simpan Transaksi
+                                </button>
+                                <button onclick="hideTransactionForm()"
+                                    class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 text-sm md:text-base">
+                                    Batal
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="responsive-table">
+                            <table class="w-full border-collapse min-w-[600px]">
+                                <thead>
+                                    <tr class="bg-gray-100">
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Tanggal</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Tipe</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Kategori</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Jumlah</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Deskripsi</th>
+                                        <th class="p-2 md:p-3 text-left text-sm md:text-base">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="finance-table">
+                                    <!-- Data akan diisi oleh JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings -->
+                <div id="settings" class="tab-content">
+                    <div class="card p-4 md:p-6">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 md:mb-6">Pengaturan Sistem</h3>
+
+                        <div class="space-y-6">
+                            <div>
+                                <h4 class="text-base md:text-lg font-semibold mb-4">Informasi Masjid</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Nama
+                                            Masjid:</label>
+                                        <input type="text" id="setting-masjid-name"
+                                            class="w-full p-2 border rounded text-sm md:text-base"
+                                            value="MASJID AL-IKHLAS">
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Alamat:</label>
+                                        <input type="text" id="setting-masjid-address"
+                                            class="w-full p-2 border rounded text-sm md:text-base"
+                                            value="Jl. Riung Wulan No. 01">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 class="text-base md:text-lg font-semibold mb-4">Lokasi Geografis</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Latitude:</label>
+                                        <input type="text" id="setting-latitude"
+                                            class="w-full p-2 border rounded text-sm md:text-base" value="-6.9419">
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Longitude:</label>
+                                        <input type="text" id="setting-longitude"
+                                            class="w-full p-2 border rounded text-sm md:text-base" value="107.6824">
+                                    </div>
+                                </div>
+                                <p class="text-gray-500 text-xs md:text-sm mt-2">Digunakan untuk perhitungan jadwal
+                                    shalat</p>
+                            </div>
+
+                            <div>
+                                <h4 class="text-base md:text-lg font-semibold mb-4">Pengaturan Jadwal</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Metode
+                                            Perhitungan:</label>
+                                        <select id="setting-calculation-method"
+                                            class="w-full p-2 border rounded text-sm md:text-base">
+                                            <option value="1">University of Islamic Sciences, Karachi</option>
+                                            <option value="2">Islamic Society of North America</option>
+                                            <option value="3">Muslim World League</option>
+                                            <option value="4">Umm Al-Qura University, Makkah</option>
+                                            <option value="5">Egyptian General Authority of Survey</option>
+                                            <option value="7">Institute of Geophysics, University of Tehran</option>
+                                            <option value="8">Gulf Region</option>
+                                            <option value="9">Kuwait</option>
+                                            <option value="10">Qatar</option>
+                                            <option value="11" selected>Majlis Ugama Islam Singapura, Singapore
+                                            </option>
+                                            <option value="12">Union Organization islamic de France</option>
+                                            <option value="13">Diyanet İşleri Başkanlığı, Turkey</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Auto
+                                            Adzan:</label>
+                                        <select id="setting-auto-adzan"
+                                            class="w-full p-2 border rounded text-sm md:text-base">
+                                            <option value="1">Aktif</option>
+                                            <option value="0">Nonaktif</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 class="text-base md:text-lg font-semibold mb-4">Pengaturan Adzan & Iqomah</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">
+                                            Menit Sebelum Adzan (Redirect):
+                                        </label>
+                                        <input type="number" id="setting-adzan-redirect"
+                                            class="w-full p-2 border rounded text-sm md:text-base" value="5" min="1"
+                                            max="30">
+                                        <p class="text-gray-500 text-xs mt-1">Halaman adzan akan muncul X menit sebelum
+                                            waktu shalat</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Di dalam tab Settings, tambahkan setelah pengaturan lainnya -->
+                            <div class="mt-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                                <h4 class="text-base md:text-lg font-semibold text-purple-800 mb-3">
+                                    <i class="fas fa-moon mr-2"></i>Pengaturan Ramadhan
+                                </h4>
+
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="font-medium text-purple-900">Mode Ramadhan</p>
+                                        <p class="text-sm text-purple-700">Aktifkan untuk menampilkan jadwal imsak
+                                            (Subuh - 10 menit)</p>
+                                        <p class="text-xs text-purple-600 mt-1">
+                                            <i class="fas fa-info-circle mr-1"></i>
+                                            Imsak akan otomatis mengikuti waktu Subuh dikurangi 10 menit
+                                        </p>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="ramadhan-mode-toggle" class="sr-only peer"
+                                                onchange="toggleRamadhanMode()">
+                                            <div
+                                                class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600">
+                                            </div>
+                                            <span class="ms-3 text-sm font-medium text-gray-700"
+                                                id="ramadhan-toggle-label">Nonaktif</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Preview Imsak -->
+                                <div class="mt-4 p-3 bg-white rounded-lg border border-purple-100">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Waktu Subuh saat ini:</span>
+                                        <span id="preview-subuh-ramadhan" class="font-mono font-bold">--:--</span>
+                                    </div>
+                                    <div class="flex justify-between items-center mt-1">
+                                        <span class="text-sm text-gray-600">Imsak (Subuh - 10 menit):</span>
+                                        <span id="preview-imsak-ramadhan"
+                                            class="font-mono font-bold text-purple-600">--:--</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 class="text-base md:text-lg font-semibold mb-4">Pengaturan Tampilan</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Rotasi Konten
+                                            (detik):</label>
+                                        <input type="number" id="setting-content-rotation"
+                                            class="w-full p-2 border rounded text-sm md:text-base" value="20">
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Rotasi
+                                            Tanggal/Event (detik):</label>
+                                        <input type="number" id="setting-date-rotation"
+                                            class="w-full p-2 border rounded text-sm md:text-base" value="15">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onclick="saveSettings()" class="btn-primary text-sm md:text-base">
+                                <i class="fas fa-save mr-2"></i> Simpan Semua Pengaturan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manual Time Setting -->
+                <div id="manual-time" class="tab-content">
+                    <div class="card p-4 md:p-6">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 md:mb-6">Setting Waktu Manual
+                        </h3>
+                        <p class="text-sm md:text-base text-gray-600 mb-4 md:mb-6">Atur waktu manual untuk keperluan
+                            testing atau jika ada masalah dengan waktu sistem</p>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 md:mb-8">
+                            <div class="p-4 md:p-6 border rounded-lg">
+                                <h4 class="text-base md:text-lg font-semibold mb-4">Tanggal Masehi</h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Tanggal:</label>
+                                        <input type="date" id="manual-gregorian-date"
+                                            class="w-full p-2 border rounded text-sm md:text-base">
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Jam:</label>
+                                        <input type="time" id="manual-gregorian-time"
+                                            class="w-full p-2 border rounded text-sm md:text-base">
+                                    </div>
+                                    <button onclick="setGregorianTime()" class="btn-primary text-sm md:text-base">
+                                        <i class="fas fa-clock mr-2"></i> Set Waktu Masehi
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="p-4 md:p-6 border rounded-lg">
+                                <h4 class="text-base md:text-lg font-semibold mb-4">Tanggal Hijriyah</h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-gray-700 mb-2 text-sm md:text-base">Tanggal
+                                            Hijriyah:</label>
+                                        <div class="flex flex-col sm:flex-row gap-2">
+                                            <select id="hijri-day"
+                                                class="flex-1 p-2 border rounded text-sm md:text-base">
+                                                <?php for($i=1; $i<=30; $i++): ?>
+                                                <option value="<?php echo $i; ?>">
+                                                    <?php echo $i; ?>
+                                                </option>
+                                                <?php endfor; ?>
+                                            </select>
+                                            <select id="hijri-month"
+                                                class="flex-1 p-2 border rounded text-sm md:text-base">
+                                                <option value="Muharram">Muharram</option>
+                                                <option value="Safar">Safar</option>
+                                                <option value="Rabiul Awal">Rabiul Awal</option>
+                                                <option value="Rabiul Akhir">Rabiul Akhir</option>
+                                                <option value="Jumadil Awal">Jumadil Awal</option>
+                                                <option value="Jumadil Akhir">Jumadil Akhir</option>
+                                                <option value="Rajab">Rajab</option>
+                                                <option value="Sya'ban">Sya'ban</option>
+                                                <option value="Ramadhan">Ramadhan</option>
+                                                <option value="Syawal">Syawal</option>
+                                                <option value="Zulqaidah">Zulqaidah</option>
+                                                <option value="Zulhijjah">Zulhijjah</option>
+                                            </select>
+                                            <input type="number" id="hijri-year"
+                                                class="flex-1 p-2 border rounded text-sm md:text-base"
+                                                placeholder="1445" value="1445">
+                                        </div>
+                                    </div>
+                                    <button onclick="setHijriDate()" class="btn-primary text-sm md:text-base">
+                                        <i class="fas fa-calendar-alt mr-2"></i> Set Tanggal Hijriyah
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-3 md:p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <h4 class="text-base md:text-lg font-semibold text-yellow-700 mb-2">Perhatian!</h4>
+                            <p class="text-sm md:text-base text-yellow-600">Pengaturan waktu manual hanya untuk
+                                keperluan testing. Sistem akan kembali ke waktu real setelah refresh atau restart.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast"
+        class="fixed bottom-4 right-4 p-3 md:p-4 rounded-lg shadow-lg hidden transition-all duration-300 text-sm md:text-base"
+        style="z-index: 9999;"></div>
+
+    <script>
+        // Responsive sidebar toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            sidebar.classList.toggle('-translate-x-full');
+            sidebar.classList.toggle('translate-x-0');
+
+            if (overlay) {
+                overlay.classList.toggle('hidden');
+            }
+        }
+
+        // Close sidebar when clicking on overlay
+        document.addEventListener('DOMContentLoaded', function () {
+            const overlay = document.getElementById('sidebar-overlay');
+            if (overlay) {
+                overlay.addEventListener('click', function () {
+                    toggleSidebar();
+                });
+            }
+
+            // Set default dates
+            const today = new Date().toISOString().split('T')[0];
+            const gregorianDate = document.getElementById('manual-gregorian-date');
+            if (gregorianDate) gregorianDate.value = today;
+
+            const gregorianTime = document.getElementById('manual-gregorian-time');
+            if (gregorianTime) gregorianTime.value = new Date().toTimeString().slice(0, 5);
+
+            const eventDate = document.getElementById('event-date');
+            if (eventDate) eventDate.value = today;
+        });
+
+        // Show tab with responsive handling
+        function showTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabId).classList.add('active');
+
+            // Update page title
+            const titles = {
+                'dashboard': 'Dashboard Admin',
+                'prayer-times': 'Jadwal Shalat',
+                'iqomah': 'Pengaturan Iqomah',
+                'running-text': 'Running Text',
+                'content': 'Manajemen Konten',
+                'events': 'Manajemen Events',
+                'finance': 'Keuangan Masjid',
+                'settings': 'Pengaturan Sistem',
+                'manual-time': 'Setting Waktu Manual'
+            };
+
+            document.getElementById('page-title').textContent = titles[tabId] || 'Dashboard Admin';
+
+            // Close sidebar on mobile after selecting tab
+            if (window.innerWidth <= 768) {
+                toggleSidebar();
+            }
+        }
+
+        // Toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.remove('hidden');
+
+            if (type === 'success') {
+                toast.classList.add('bg-green-500', 'text-white');
+                toast.classList.remove('bg-red-500', 'bg-yellow-500');
+            } else if (type === 'error') {
+                toast.classList.add('bg-red-500', 'text-white');
+                toast.classList.remove('bg-green-500', 'bg-yellow-500');
+            } else {
+                toast.classList.add('bg-yellow-500', 'text-white');
+                toast.classList.remove('bg-green-500', 'bg-red-500');
+            }
+
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Function stubs for demo
+        function refreshPreview() { showToast('Preview direfresh'); }
+        function openFullPreview() { window.open('/', '_blank'); }
+        function fetchFromAPI() { showToast('Mengambil data dari API...'); }
+        function showManualInput() {
+            document.getElementById('manual-input').classList.toggle('hidden');
+            showToast('Form input manual ditampilkan', 'info');
+        }
+        function saveManualTimes() { showToast('Jadwal manual disimpan'); }
+        function saveIqomahSettings() { showToast('Pengaturan iqomah disimpan'); }
+        function saveRunningText() { showToast('Running text disimpan'); }
+        function showUploadForm() {
+            document.getElementById('upload-form').classList.toggle('hidden');
+
+            // Show/hide announcement settings based on type
+            document.getElementById('content-type').addEventListener('change', function () {
+                const announcementSettings = document.getElementById('announcement-settings');
+                if (this.value === 'announcement') {
+                    announcementSettings.classList.remove('hidden');
+                    document.getElementById('file-upload-section').classList.add('hidden');
+                } else {
+                    announcementSettings.classList.add('hidden');
+                    document.getElementById('file-upload-section').classList.remove('hidden');
+                }
+            });
+        }
+        function hideUploadForm() { document.getElementById('upload-form').classList.add('hidden'); }
+        function uploadContent() { showToast('Konten berhasil diupload'); hideUploadForm(); }
+        function updateAnnouncementPreview() { showToast('Preview diperbarui'); }
+        function showEventForm() { document.getElementById('event-form').classList.toggle('hidden'); }
+        function hideEventForm() { document.getElementById('event-form').classList.add('hidden'); }
+        function saveEvent() { showToast('Event berhasil disimpan'); hideEventForm(); }
+        function showTransactionForm() { document.getElementById('transaction-form').classList.toggle('hidden'); }
+        function hideTransactionForm() { document.getElementById('transaction-form').classList.add('hidden'); }
+        function saveTransaction() { showToast('Transaksi berhasil disimpan'); hideTransactionForm(); }
+        function saveSettings() { showToast('Pengaturan berhasil disimpan'); }
+        function setGregorianTime() { showToast('Waktu masehi diatur'); }
+        function setHijriDate() { showToast('Tanggal hijriyah diatur'); }
+        function logout() {
+            if (confirm('Yakin ingin logout?')) {
+                showToast('Logout berhasil');
+                setTimeout(() => { window.location.reload(); }, 1500);
+            }
+        }
+        function updateOpacityValue(val) {
+            document.getElementById('opacity-value').textContent = val;
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function () {
+            if (window.innerWidth > 768) {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebar-overlay');
+
+                sidebar.classList.remove('-translate-x-full');
+                sidebar.classList.add('translate-x-0');
+
+                if (overlay) {
+                    overlay.classList.add('hidden');
+                }
+            }
+        });
+    </script>
+
+    <!-- Note: admin.js should contain the actual implementation -->
+    <script src="./admin.js"></script>
+</body>
+
+</html>

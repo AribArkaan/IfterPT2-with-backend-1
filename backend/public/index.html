@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Masjid Al-Ikhlas - Jadwal Shalat</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="./Masjid-Alikhlas.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Jaldi:wght@400;700&family=Jockey+One&family=Jost:wght@400;700&family=Kanit:wght@400;700&display=swap"
+    rel="stylesheet">
+
+
+</head>
+
+<body class="h-screen w-screen overflow-hidden text-[#000000] text-[1vw]">
+
+  <div class="grid grid-cols-[30%_1fr] h-full">
+
+    <div class="bg-white/80 h-full flex flex-col p-[2vw] backdrop-blur-sm animate-fadeIn">
+
+      <div class="text-center">
+        <h1 id="live-clock" class="font-jaldi font-bold text-[8vw] tracking-wide">...</h1>
+      </div>
+
+      <div class="text-center my-[0.5vw]">
+        <h2 id="next-prayer-countdown" class="font-jaldi text-[2vw] -mt-[2vw] font-bold">Memuat...</h2>
+      </div>
+
+      <div class="flex items-center justify-center my-[1.5vw]">
+
+        <div class="flex-grow h-[1px] bg-gradient-to-r from-transparent via-black to-black"></div>
+
+        <div class="mx-[1.5vw] relative flex items-center justify-center w-[2vw] h-[2vw]">
+          <div class="absolute w-full h-full border-[1.5px] border-black bg-white rotate-0"></div>
+          <div class="absolute w-full h-full border-[1.5px] border-black bg-white rotate-45"></div>
+          <div class="absolute w-[0.6vw] h-[0.6vw] bg-black rounded-full z-10"></div>
+        </div>
+
+        <div class="flex-grow h-[1px] bg-gradient-to-r from-black via-black to-transparent"></div>
+
+      </div>
+
+      <div class="flex flex-col justify-between font-jaldi text-[2.5vw] flex-grow">
+
+        <div id="prayer-Subuh"
+          class="prayer-item flex justify-between items-center px-[1vw] py-[0.5vw] rounded-lg border-b border-gray-600 border-dashed">
+          <span class="font-regular">SUBUH</span>
+          <span id="time-Subuh" class="font-bold">...</span>
+        </div>
+
+        <div id="prayer-Terbit"
+          class="prayer-item flex justify-between items-center px-[1vw] py-[0.5vw] rounded-lg border-b border-gray-600 border-dashed">
+          <span class="font-regular">TERBIT</span>
+          <span id="time-Terbit" class="font-bold">...</span>
+        </div>
+
+        <div id="prayer-Dzuhur"
+          class="prayer-item flex justify-between items-center px-[1vw] py-[0.5vw] rounded-lg border-b border-gray-600 border-dashed">
+          <span class="font-regular">DZUHUR</span>
+          <span id="time-Dzuhur" class="font-bold">...</span>
+        </div>
+
+        <div id="prayer-Ashar"
+          class="prayer-item flex justify-between items-center px-[1vw] py-[0.5vw] rounded-lg border-b border-gray-600 border-dashed">
+          <span class="font-regular">ASHAR</span>
+          <span id="time-Ashar" class="font-bold">...</span>
+        </div>
+
+        <div id="prayer-Maghrib"
+          class="prayer-item flex justify-between items-center px-[1vw] py-[0.5vw] rounded-lg border-b border-gray-600 border-dashed">
+          <span class="font-regular">MAGHRIB</span>
+          <span id="time-Maghrib" class="font-bold">...</span>
+        </div>
+
+        <div id="prayer-Isya" class="prayer-item flex justify-between items-center px-[1vw] py-[0.5vw] rounded-lg">
+          <span class="font-regular">ISYA</span>
+          <span id="time-Isya" class="font-bold">...</span>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="flex flex-col h-full min-w-0">
+
+      <div class="bg-white/80 flex items-center p-[1.5vw] backdrop-blur-sm animate-fadeIn"
+        style="animation-delay: 0.2s;">
+        <!-- <div class="border-2 border-black h-[4vw] mr-[1vw] rounded-2xl"></div> -->
+        <div class="relative flex flex-col -ml-4 pl-[10vw] pr-[10vw] py-4 items-center justify-center">
+
+          <div class="absolute left-0 top-0 h-full flex flex-col items-center justify-between w-4">
+
+            <div class="absolute top-0 w-[2px] h-[35%] bg-gradient-to-b from-black to-transparent"></div>
+
+            <div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 z-20">
+              <div class="absolute inset-0 border border-black bg-white rotate-0"></div>
+              <div class="absolute inset-0 border border-black bg-white rotate-45"></div>
+              <div class="absolute top-1 left-1 w-1 h-1 bg-black rounded-full"></div>
+            </div>
+
+            <div class="absolute bottom-0 w-[2px] h-[35%] bg-gradient-to-t from-black to-transparent"></div>
+          </div>
+
+
+          <div class="absolute right-0 top-0 h-full flex flex-col items-center justify-between w-4">
+
+            <div class="absolute top-0 w-[2px] h-[35%] bg-gradient-to-b from-black to-transparent"></div>
+
+            <div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 z-20">
+              <div class="absolute inset-0 border border-black bg-white rotate-0"></div>
+              <div class="absolute inset-0 border border-black bg-white rotate-45"></div>
+              <div class="absolute top-1 left-1 w-1 h-1 bg-black rounded-full"></div>
+            </div>
+
+            <div class="absolute bottom-0 w-[2px] h-[35%] bg-gradient-to-t from-black to-transparent"></div>
+          </div>
+
+
+          <h2 class="font-jockey-one text-[2.5vw] tracking-wide"></h2>
+          <p class="font-jost text-[1.2vw] text-gray-600"></p>
+
+        </div>
+        <!-- <div class="border-2 border-black ml-[8vw] h-[4vw] mx-[2vw] rounded-2xl"></div> -->
+        <div class="flex-grow"></div>
+        <div id="date-event-rotator" class="text-right h-[6vw] relative w-[30vw]">
+          <div id="date-display" class="content-item active text-[2vw] animate-slideUpCustom font-kanit text-right">
+            <p id="gregorian-date" class="font-bold text-right w-full"></p>
+            <p id="hijri-date" class="font-regular text-right w-full"></p>
+          </div>
+          <div id="event-display" class="content-item text-[2vw] animate-slideUpCustom text-right">
+            <p class="font-jost font-bold text-right w-full"></p>
+            <p class="font-jost text-right w-full"></p>
+          </div>
+        </div>
+      </div>
+
+      <div id="main-content-rotator" class="flex-grow relative overflow-hidden">
+
+        <div class="content-item active">
+          <img src="" alt="" class="w-full h-full object-contain ">
+        </div>
+
+        <div class="content-item">
+          <video src=" " autoplay muted loop playsinline class="w-full h-full object-cover">
+            Browser Anda tidak mendukung tag video.
+          </video>
+        </div>
+
+        <div class="content-item">
+          <img src=" " alt="Pengumuman" class="w-full h-full object-cover">
+        </div>
+
+      </div>
+
+      <div class="w-full bg-gray-900 text-white p-[0.8vw] overflow-hidden">
+        <div class="running-text-content font-jost text-[1.3vw]">
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="./Masjid-Alikhlas.js"></script>
+</body>
+
+</html>
