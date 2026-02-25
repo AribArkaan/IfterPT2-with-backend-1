@@ -1132,7 +1132,7 @@ app.use((err, req, res, next) => {
 // ==================== START SERVER ====================
 const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║                                                            ║');
@@ -1152,6 +1152,28 @@ server.listen(PORT, () => {
   console.log('');
   console.log('Press Ctrl+C to stop the server');
   console.log('');
+
+  // Launch browser in kiosk mode using dynamic import
+  try {
+    const open = await import('open');
+    const url = `http://localhost:${PORT}`;
+    console.log(`🌐 Launching landing page in kiosk mode...`);
+    
+    await open.default(url, {
+      app: {
+        name: 'chrome',
+        arguments: ['--kiosk', '--no-first-run', '--disable-background-networking']
+      }
+    });
+  } catch (err) {
+    console.warn('⚠️  Chrome not found, attempting to launch with default browser...');
+    try {
+      const open = await import('open');
+      await open.default(`http://localhost:${PORT}`);
+    } catch (fallbackErr) {
+      console.error('Failed to open browser:', fallbackErr.message);
+    }
+  }
 });
 
 // Graceful shutdown
