@@ -92,8 +92,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     return true; // Default true jika gagal
   }
 
-
-
   // WebSocket connection
   let ws = null;
   let financeChartInstance = null;
@@ -263,10 +261,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Insert setelah Subuh
     const subuhElement = document.getElementById('prayer-Subuh');
 
-    if (subuhElement) {      
+    if (subuhElement) {
       prayerContainer.insertBefore(imsakItem, subuhElement);
       console.log('✅ Imsak ditempatkan di ATAS Subuh');
-    } else {    
+    } else {
       prayerContainer.insertBefore(imsakItem, prayerContainer.firstChild);
     }
   }
@@ -745,6 +743,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  function isHijriDatePlausible(hijriString) {
+    try {
+      const parsed = parseHijriDate(hijriString);
+      if (!parsed) return false;
+
+      const day = parseInt(parsed.day);
+      const year = parseInt(parsed.year);
+
+      if (day < 1 || day > 30) return false;
+      if (year < 1440 || year > 1450) return false;
+
+      // Cek dengan perhitungan lokal (toleransi ±3 hari)
+      const calculated = calculateHijriDate(new Date());
+      const calculatedDay = parseInt(calculated.day);
+
+      if (Math.abs(day - calculatedDay) > 3) {
+        console.warn('⚠️ DB date seems off:', hijriString, 'vs', calculated.formatted);
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function startHijriDateAutoRefresh() {
     // Refresh setiap jam untuk cek cache
     setInterval(async () => {
@@ -776,6 +800,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 60000); // Cek setiap menit
   }
 
+
   // Handle WebSocket updates
   function handleWebSocketUpdate(data) {
     console.log('🔄 Processing WebSocket update:', data.type);
@@ -794,6 +819,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       case 'prayer_times_updated':
         console.log('🕌 Prayer times updated, recalculating imsak...');
+        loadPrayerTimes();
         if (STATE.ramadhanMode) {
           loadImsakTime().then(() => {
             addImsakToSidebar();
@@ -801,14 +827,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         break;
 
-
-
       case 'settings_updated':
         console.log('⚙️ Settings diperbarui');
 
         // Cek apakah ada update untuk finance_display
         if (data.data) {
-          // Single setting update
           if (data.data.key === 'finance_display') {
             const showFinance = data.data.value === '1';
             console.log(`💰 Finance display setting updated via WebSocket: ${showFinance ? 'SHOW' : 'HIDE'}`);
@@ -824,13 +847,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             refreshContentDisplay();
           }
 
-          // Update masjid info jika ada
           if (data.data.key === 'masjid_name' || data.data.key === 'masjid_address') {
             loadMasjidInfo();
           }
         }
 
-        // Bulk settings update
         if (Array.isArray(data.data)) {
           const financeSetting = data.data.find(s => s.key === 'finance_display');
           if (financeSetting) {
@@ -846,8 +867,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         break;
 
       case 'events_updated':
-        console.log('📅 Events diperbarui');
-        loadEvents();
+        console.log('📅 Events diperbarui via WebSocket');
+        refreshEventDisplay(); // Gunakan fungsi baru
         break;
 
       case 'iqomah_times_updated':
@@ -1011,44 +1032,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     console.log(`✅ Running text displayed. Speed: ${calculatedSpeed}s`);
   }
-
-  function addRunningTextStyles() {
-    // Cek agar tidak menumpuk style tag jika fungsi dipanggil berulang
-    if (document.getElementById('dynamic-marquee-style')) return;
-
-    const style = document.createElement('style');
-    style.id = 'dynamic-marquee-style';
-    style.textContent = `
-        @keyframes marquee {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); } 
-        }
-        
-        .animate-marquee {
-            display: flex;
-            width: fit-content; /* Penting agar lebar sesuai konten */
-            animation: marquee linear infinite;
-            will-change: transform;
-        }
-        
-        .marquee-wrapper {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
-            -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
-        }
-
-        /* Responsive font size override jika perlu */
-        .running-text-item {
-            white-space: nowrap;
-        }
-    `;
-    document.head.appendChild(style);
-  }
-
-  addRunningTextStyles();
 
   function escapeHTML(text) {
     return String(text)
@@ -1224,72 +1207,72 @@ document.addEventListener('DOMContentLoaded', async () => {
     return true;
   }
 
-
-
   function addFinanceContentItem(rotator) {
+    // Cek apakah sudah ada finance item
+    const existingFinance = document.getElementById('finance-content-item');
+    if (existingFinance) {
+      existingFinance.remove();
+    }
+
     const financeItem = document.createElement('div');
-    financeItem.className = 'content-item'; // Jangan set active di sini
+    financeItem.className = 'content-item';
     financeItem.id = 'finance-content-item';
     financeItem.innerHTML = `
-<div class="flex flex-col p-8 gap-6 h-full bg-gradient-to-br from-slate-50 to-slate-100">
-  <!-- Header -->
-  <div class="flex justify-between items-end border-b border-slate-200 pb-4">
-    <h2 class="font-kanit font-bold text-3xl text-slate-800 tracking-tight">Laporan Keuangan Masjid</h2>
-    <p id="finance-last-update" class="font-jost text-sm text-slate-500 font-medium">Update: ...</p>
-  </div>
+        <div class="flex flex-col p-8 gap-6 h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-auto">
+            <!-- Header -->
+            <div class="flex justify-between items-end border-b border-slate-200 pb-4">
+                <h2 class="font-kanit font-bold text-3xl text-slate-800 tracking-tight">Laporan Keuangan Masjid</h2>
+                <p id="finance-last-update" class="font-jost text-sm text-slate-500 font-medium">Update: ...</p>
+            </div>
 
-  <!-- Saldo Card (Full Width) -->
- <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-  <div class="flex items-center justify-center gap-4">
-    <span class="font-kanit text-4xl text-slate-400 uppercase tracking-widest font-semibold">Saldo Akhir</span>
-    <div class="h-8 w-px bg-slate-200"></div>
-    <span id="fin-saldo" class="font-jockey-one text-4xl text-slate-800 tracking-tight">Rp 0</span>
-  </div>
-</div>
+            <!-- Saldo Card -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div class="flex items-center justify-center gap-4">
+                    <span class="font-kanit text-4xl text-slate-400 uppercase tracking-widest font-semibold">Saldo Akhir</span>
+                    <div class="h-8 w-px bg-slate-200"></div>
+                    <span id="fin-saldo" class="font-jockey-one text-4xl text-slate-800 tracking-tight">Rp 0</span>
+                </div>
+            </div>
 
-  <!-- Recent Transactions (2 Columns - 5 Left, 5 Right) -->
-  <div class="grid grid-cols-2 gap-6 flex-grow">
-    <!-- Left Column: No 1-5 -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
-      <div class="flex-grow p-4">
-        <table class="w-full text-sm font-jost">
-          <thead class="text-slate-400 border-b border-slate-100">
-            <tr>            
-              <th class="text-left py-2 font-medium">Tanggal</th>
-              <th class="text-left py-2 font-medium">Keterangan</th>
-              <th class="text-right py-2 font-medium">Nominal</th>
-            </tr>
-          </thead>
-          <tbody id="recent-transactions-body" class="divide-y divide-slate-50"></tbody>
-        </table>
-      </div>
-    </div>
+            <!-- Recent Transactions (2 Columns) -->
+            <div class="grid grid-cols-2 gap-6 flex-grow min-h-[300px]">
+                <!-- Left Column -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+                    <div class="flex-grow p-4">
+                        <table class="w-full text-sm font-jost">
+                            <thead class="text-slate-400 border-b border-slate-100">
+                                <tr>            
+                                    <th class="text-left py-2 font-medium w-[25%]">Tanggal</th>
+                                    <th class="text-left py-2 font-medium w-[50%]">Keterangan</th>
+                                    <th class="text-right py-2 font-medium w-[25%]">Nominal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-transactions-body" class="divide-y divide-slate-50"></tbody>
+                        </table>
+                    </div>
+                </div>
 
-    <!-- Right Column: No 6-10 -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
-      <div class="flex-grow p-4">
-        <table class="w-full text-sm font-jost">
-          <thead class="text-slate-400 border-b border-slate-100">
-            <tr>             
-              <th class="text-left py-2 font-medium">Tanggal</th>
-              <th class="text-left py-2 font-medium">Keterangan</th>
-              <th class="text-right py-2 font-medium">Nominal</th>
-            </tr>
-          </thead>
-          <tbody id="recent-transactions-right" class="divide-y divide-slate-50"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-  `;
+                <!-- Right Column -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+                    <div class="flex-grow p-4">
+                        <table class="w-full text-sm font-jost">
+                            <thead class="text-slate-400 border-b border-slate-100">
+                                <tr>             
+                                    <th class="text-left py-2 font-medium w-[25%]">Tanggal</th>
+                                    <th class="text-left py-2 font-medium w-[50%]">Keterangan</th>
+                                    <th class="text-right py-2 font-medium w-[25%]">Nominal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-transactions-right" class="divide-y divide-slate-50"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 
     rotator.appendChild(financeItem);
-
-    // Trigger load data keuangan
-    setTimeout(() => {
-      loadFinanceData();
-    }, 500);
+    console.log('✅ Finance item added to rotator');
   }
 
   // Start content rotation
@@ -1323,16 +1306,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load events
   async function loadEvents() {
     try {
+      console.log('📥 Loading events...');
       const response = await fetch('/api/events');
       if (!response.ok) throw new Error('Gagal mengambil events');
 
       const result = await response.json();
       if (result.success && result.data) {
-        STATE.events = result.data.filter(event => event.is_active);
+        // Filter hanya event yang aktif dan urutkan berdasarkan tanggal terdekat
+        STATE.events = result.data
+          .filter(event => event.is_active)
+          .sort((a, b) => new Date(a.target_date) - new Date(b.target_date));
+
+        console.log(`✅ Events loaded: ${STATE.events.length} events`);
         initDateEventRotator();
       }
     } catch (error) {
-      console.error('Error loading events:', error);
+      console.error('❌ Error loading events:', error);
+      STATE.events = [];
     }
   }
 
@@ -1344,101 +1334,99 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const rotator = document.getElementById('date-event-rotator');
-    if (!rotator) return;
+    if (!rotator) {
+      console.error('❌ Rotator element not found');
+      return;
+    }
 
     // Clear existing items
     rotator.innerHTML = '';
 
-    // Tambah date display sebagai item pertama
-    const dateItem = document.createElement('div');
-    dateItem.className = 'content-item active';
-    dateItem.id = 'date-display';
-    rotator.appendChild(dateItem);
+    // ==========================================================
+    // POLA SELANG-SELING: Tanggal → Event → Tanggal → Event
+    // ==========================================================
+    const rotationItems = [];
 
-    // Tambah event displays dengan layout yang diperbaiki
-    STATE.events.forEach((event, index) => {
-      const eventDate = new Date(event.target_date);
-      const today = new Date();
-      const timeDiff = eventDate.getTime() - today.getTime();
-      const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    if (STATE.events && STATE.events.length > 0) {
+      STATE.events.forEach((event, index) => {
+        // Tambah TANGGAL sebelum setiap event
+        rotationItems.push({
+          type: 'date',
+          id: `date-slot-${index}`
+        });
 
-      const eventItem = document.createElement('div');
-      eventItem.className = 'content-item event-item';
-      eventItem.dataset.eventId = event.id;
+        // Tambah EVENT
+        rotationItems.push({
+          type: 'event',
+          id: `event-${event.id}`,
+          event: event
+        });
+      });
+    } else {
+      // Fallback jika tidak ada event
+      rotationItems.push({
+        type: 'date',
+        id: 'date-only'
+      });
+    }
 
-      // HTML structure: judul event di atas dengan marquee, sisa hari di bawah
-      eventItem.innerHTML = `
-            <div class="event-container flex flex-col items-end justify-center w-full h-full">
-                <!-- Container untuk judul event dengan marquee -->
-                <div class="event-title-container w-full text-right overflow-hidden mb-1">
-                    <div class="event-title-text font-jost font-bold text-[2vw] whitespace-nowrap text-right" 
-                         data-original-text="${escapeHTML(event.title)}">
-                        ${escapeHTML(event.title)}
-                    </div>
-                </div>
-                <!-- Sisa hari - berada di bawah judul -->
-                <div class="event-days text-right">
-                    <span class="font-jost text-[1.5vw] ${daysLeft <= 7 ? 'text-red-600 font-bold' : daysLeft <= 30 ? 'text-yellow-600' : 'text-green-600'}">
-                        ${daysLeft > 0 ? `${daysLeft} Hari Lagi` : 'Hari Ini'}
-                    </span>
-                </div>
-            </div>
-        `;
+    // Render items ke DOM
+    rotationItems.forEach((item, index) => {
+      const div = document.createElement('div');
+      div.id = item.id;
+      div.className = `content-item ${index === 0 ? 'active' : ''}`;
 
-      rotator.appendChild(eventItem);
+      if (item.type === 'event') {
+        div.dataset.eventId = item.event.id;
+        div.classList.add('event-item');
+      } else {
+        div.classList.add('date-display-item');
+      }
+
+      rotator.appendChild(div);
     });
 
-    // Update date display pertama kali
-    updateDateDisplay();
+    // Update konten
+    updateAllDateDisplays();
+    STATE.events.forEach(event => updateEventDisplay(event));
 
-    // Cek dan aktifkan marquee untuk judul yang terlalu panjang
-    setTimeout(() => {
-      document.querySelectorAll('.event-title-container').forEach(container => {
-        checkAndAnimateTitle(container);
-      });
-    }, 100);
+    console.log(`✅ Rotator ready: ${rotationItems.map(i => i.type === 'date' ? '📅' : '📢').join('→')}`);
 
-    // Start rotation jika ada lebih dari 1 item
-    if (rotator.children.length > 1) {
+    if (rotationItems.length > 1) {
       startDateEventRotation();
     }
   }
 
-  function checkAndAnimateTitle(container) {
-    if (!container) return;
-
-    const titleElement = container.querySelector('.event-title-text');
-    if (!titleElement) return;
-
-    // Reset class dan style
-    titleElement.classList.remove('needs-marquee', 'animate-marquee-title');
-    titleElement.style.animation = 'none';
-    titleElement.style.transform = 'translateX(0)';
-    titleElement.style.paddingRight = '0';
-
-    // Force reflow
-    void titleElement.offsetWidth;
-
-    const titleWidth = titleElement.scrollWidth;
-    const containerWidth = container.clientWidth;
-
-    console.log(`📏 Title width: ${titleWidth}px, Container width: ${containerWidth}px`);
-
-    // Jika title lebih panjang dari container, aktifkan marquee
-    if (titleWidth > containerWidth) {
-      titleElement.classList.add('needs-marquee', 'animate-marquee-title');
-
-      // Hitung durasi berdasarkan panjang teks (semakin panjang, semakin lambat)
-      const duration = Math.max(8, titleWidth / 30);
-
-      titleElement.style.animationDuration = `${duration}s`;
-      // Tambah padding kanan untuk jeda di akhir
-      titleElement.style.paddingRight = '100px';
-
-      console.log(`🎬 Marquee activated for: "${titleElement.textContent.trim()}" (${titleWidth}px > ${containerWidth}px), duration: ${duration}s`);
-    } else {
-      console.log(`✅ No marquee needed for: "${titleElement.textContent.trim()}"`);
+  // Start date/event rotation
+  function startDateEventRotation() {
+    if (STATE.dateEventRotationInterval) {
+      clearInterval(STATE.dateEventRotationInterval);
     }
+
+    const rotator = document.getElementById('date-event-rotator');
+    if (!rotator) return;
+
+    const items = rotator.querySelectorAll('.content-item');
+    if (items.length <= 1) return;
+
+    STATE.dateEventRotationInterval = setInterval(() => {
+      const current = rotator.querySelector('.content-item.active');
+      if (!current) {
+        items[0]?.classList.add('active');
+        return;
+      }
+
+      current.classList.remove('active');
+      let next = current.nextElementSibling || items[0];
+      next.classList.add('active');
+
+      // Refresh date jika tanggal (untuk update realtime)
+      if (next.classList.contains('date-display-item')) {
+        updateAllDateDisplays();
+      }
+
+      console.log(`🔄 Rotated to: ${next.classList.contains('event-item') ? 'Event' : 'Date'}`);
+    }, CONFIG.DISPLAY.ROTATION_INTERVALS.DATE_EVENT);
   }
 
   function addEventMarqueeStyles() {
@@ -1447,129 +1435,84 @@ document.addEventListener('DOMContentLoaded', async () => {
     const style = document.createElement('style');
     style.id = 'event-marquee-styles';
     style.textContent = `
-        /* Container untuk event item */
-        .event-item {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-        }
+    /* Container dasar */
+    .date-container, .event-container {
+      width: 100%;
+      height: 100%;
+      padding: 0 1vw;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-sizing: border-box;
+    }
 
-        /* Container event - flex column untuk judul di atas, sisa hari di bawah */
-        .event-container {
-            width: 100%;
-            height: 100%;
-            padding: 0 1vw;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
+    /* Styling tanggal */
+    .gregorian-date {
+      line-height: 1.2;
+    }
+    
+    .hijri-date {
+      line-height: 1.2;
+      opacity: 0.8;
+    }
 
-        /* Container untuk title dengan overflow hidden */
-        .event-title-container {
-            width: 100%;
-            position: relative;
-            overflow: hidden;
-            mask-image: linear-gradient(to right, transparent, black 3%, black 97%, transparent);
-            -webkit-mask-image: linear-gradient(to right, transparent, black 3%, black 97%, transparent);
-            height: auto;
-            min-height: 2.5vw;
-        }
+    /* Styling judul event - WRAP KE BAWAH */
+    .event-title-wrap {
+      /* white-space: normal sudah di-set inline */
+      /* text-align: right sudah di-set via class Tailwind */
+      max-width: 100%;
+    }
 
-        /* Default style untuk title */
-        .event-title-text {
-            display: inline-block;
-            white-space: nowrap;
-            transition: transform 0.3s ease;
-            float: right; /* Untuk memastikan teks rata kanan */
-            will-change: transform;
-        }
+    /* Visibility control */
+    .content-item { 
+      display: none; 
+      width: 100%; 
+      height: 100%; 
+    }
+    .content-item.active { 
+      display: block; 
+    }
 
-        /* Animasi marquee yang lebih smooth dan visible */
-        @keyframes eventMarqueeSlide {
-            0% {
-                transform: translateX(0);
-            }
-            5% {
-                transform: translateX(0); /* Pause di awal */
-            }
-            45% {
-                transform: translateX(calc(-100% + 100%)); /* Gerak ke kiri */
-            }
-            55% {
-                transform: translateX(calc(-100% + 100%)); /* Pause di akhir */
-            }
-            95% {
-                transform: translateX(0); /* Kembali ke awal */
-            }
-            100% {
-                transform: translateX(0); /* Pause sebelum loop */
-            }
-        }
-
-        /* Class untuk mengaktifkan animasi */
-        .event-title-text.animate-marquee-title {
-            animation: eventMarqueeSlide linear infinite;
-        }
-
-        /* Styling untuk sisa hari */
-        .event-days {
-            width: 100%;
-            margin-top: 0.5vh;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .event-title-text {
-                font-size: 4vw !important;
-            }
-            .event-days span {
-                font-size: 3vw !important;
-            }
-        }
-    `;
+    /* Responsive */
+    @media (max-width: 768px) {
+      .event-title-wrap {
+        font-size: 4vw !important;
+      }
+      .event-container span {
+        font-size: 3vw !important;
+      }
+      .gregorian-date {
+        font-size: 3.5vw !important;
+      }
+      .hijri-date {
+        font-size: 2.8vw !important;
+      }
+    }
+  `;
     document.head.appendChild(style);
+    console.log('✅ Event styles added (no marquee)');
   }
 
-  function handleResize() {
-    clearTimeout(window.resizeTimeout);
-    window.resizeTimeout = setTimeout(() => {
-      console.log('📐 Window resized, rechecking marquee...');
-      document.querySelectorAll('.event-title-container').forEach(container => {
-        checkAndAnimateTitle(container);
-      });
-    }, 250);
+  async function refreshEventDisplay() {
+    console.log('🔄 Refreshing event displays...');
+
+    // Reload events dari API
+    await loadEvents();
+
+    // Update semua event display
+    STATE.events.forEach(event => {
+      updateEventDisplay(event);
+    });
+
+    console.log('✅ Event displays refreshed');
   }
 
-  // Start date/event rotation
-  function startDateEventRotation() {
-    STATE.dateEventRotationInterval = setInterval(() => {
-      const rotator = document.getElementById('date-event-rotator');
-      if (!rotator) {
-        clearInterval(STATE.dateEventRotationInterval);
-        return;
-      }
-
-      const items = rotator.querySelectorAll('.content-item');
-      if (items.length <= 1) return;
-
-      const currentActive = rotator.querySelector('.content-item.active');
-      if (!currentActive) return;
-
-      currentActive.classList.remove('active');
-
-      let nextItem = currentActive.nextElementSibling;
-      if (!nextItem) {
-        nextItem = items[0];
-      }
-
-      if (nextItem) {
-        nextItem.classList.add('active');
-      }
-    }, CONFIG.DISPLAY.ROTATION_INTERVALS.DATE_EVENT);
-  }
+  const HIJRI_CONFIG = {
+    CACHE_DURATION: 60 * 60 * 1000,  // 1 jam
+    AUTO_REFRESH_TIMES: ['00:00', '06:00', '12:00', '18:00'],
+    API_TIMEOUT: 8000,
+    MAX_RETRY: 3
+  };
 
   async function getHijriDate() {
     try {
@@ -1674,6 +1617,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+
   // Fetch tanggal Hijriyah dari API Aladhan
   async function fetchHijriDateFromAPI() {
     try {
@@ -1717,6 +1661,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     return null;
   }
+
 
   function parseHijriDate(hijriString) {
     try {
@@ -1765,86 +1710,96 @@ document.addEventListener('DOMContentLoaded', async () => {
       day + b - 1524.5;
   }
 
+
   // Update date display - DIPERBAIKI
-  async function updateDateDisplay() {
-    const dateItem = document.getElementById('date-display');
-    if (!dateItem) return;
+  async function updateAllDateDisplays() {
+    const dateElements = document.querySelectorAll('.date-display-item');
+    if (dateElements.length === 0) return;
 
     const now = new Date();
+    const gregorianDate = now.toLocaleDateString('id-ID', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
 
-    // Gregorian date
-    const gregorianOptions = {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    };
-    const gregorianDate = now.toLocaleDateString('id-ID', gregorianOptions);
-
-    // Ambil tanggal Hijriyah dari berbagai sumber
-    const hijriData = await getHijriDate();
-
-    // Simpan ke STATE
-    STATE.hijriDate = hijriData.formatted;
-    STATE.hijriDay = hijriData.day;
-    STATE.hijriMonth = hijriData.month;
-    STATE.hijriYear = hijriData.year;
-    STATE.hijriSource = hijriData.source;
-    STATE.lastHijriUpdate = new Date();
-
-    // Tampilkan di element
-    dateItem.innerHTML = `
-        <div class="text-right">
-            <p class="font-bold text-2xl">${gregorianDate}</p>
-            <p class="text-xl text-gray-600" title="Sumber: ${hijriData.source}">
-                ${hijriData.formatted}
-                ${hijriData.source === 'cache' ? '📦' :
-        hijriData.source === 'settings' ? '⚙️' :
-          hijriData.source === 'api' ? '' : '📅'}
-            </p>
-        </div>
-    `;
-
-    console.log(`📅 Hijri date updated: ${hijriData.formatted} (${hijriData.source})`);
-  }
-
-  function julianToHijriUmmAlQura(jd) {
-    jd = Math.floor(jd) + 0.5;
-
-    // Z adalah jumlah hari sejak epoch Hijriyah (15 Juli 622 M)
-    const Z = jd - 1948439.5;
-    const cyc = Math.floor(Z / 10631);
-    const Zrem = Z % 10631;
-    const year = 30 * cyc + 1;
-
-    let month = 0;
-    let day = 0;
-
-    if (Zrem === 10630) {
-      month = 12;
-      day = 30;
-    } else {
-      const cyc2 = Math.floor(Zrem / 354 + 0.5);
-      const year2 = cyc2 + 1;
-      const Zrem2 = Zrem - 354 * cyc2 - Math.floor((3 + 11 * year2) / 30);
-
-      if (Zrem2 < 0) {
-        month = Math.floor((Zrem2 + 30) / 29.5);
-        day = Math.floor(Zrem2 + 30 - 29.5 * month);
-      } else {
-        month = Math.floor(Zrem2 / 29.5);
-        day = Math.floor(Zrem2 - 29.5 * month);
+    // Ambil Hijri date jika belum ada
+    if (!STATE.hijriDate) {
+      try {
+        const hijriData = await getHijriDate();
+        STATE.hijriDate = hijriData.formatted;
+      } catch (e) {
+        STATE.hijriDate = '...';
       }
-
-      month += 1;
-      day += 1;
     }
 
-    return {
-      year: year,
-      month: month,
-      day: day
-    };
+    dateElements.forEach(el => {
+      el.innerHTML = `
+      <div class="date-container">
+        <div class="gregorian-date font-jost font-bold text-[2.2vw] text-right w-full leading-tight">
+          ${gregorianDate}
+        </div>
+        <div class="hijri-date font-jost text-[1.8vw] text-gray-600 text-right w-full mt-1 leading-tight">
+          ${STATE.hijriDate}
+        </div>
+      </div>
+    `;
+    });
+  }
+
+  function updateEventDisplay(event) {
+    const el = document.getElementById(`event-${event.id}`);
+    if (!el) return;
+
+    const eventDate = new Date(event.target_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    eventDate.setHours(0, 0, 0, 0);
+
+    const daysLeft = Math.ceil((eventDate - today) / (1000 * 3600 * 24));
+
+    // Tentukan teks dan warna sisa hari
+    let text, cls;
+    if (daysLeft < 0) {
+      text = 'Telah Berlalu';
+      cls = 'text-gray-500';
+    }
+    else if (daysLeft === 0) {
+      text = 'Hari Ini';
+      cls = 'text-purple-600 font-bold';
+    }
+    else if (daysLeft <= 3) {
+      text = `${daysLeft} Hari Lagi`;
+      cls = 'text-red-600 font-bold';
+    }
+    else if (daysLeft <= 7) {
+      text = `${daysLeft} Hari Lagi`;
+      cls = 'text-orange-600';
+    }
+    else {
+      text = `${daysLeft} Hari Lagi`;
+      cls = 'text-green-600';
+    }
+
+    // ==========================================================
+    // PERUBAHAN UTAMA: Judul wrap ke bawah dengan rata kanan
+    // - white-space: normal (bukan nowrap)
+    // - text-align: right
+    // - word-break: break-word untuk menghindari overflow
+    // ==========================================================
+    el.innerHTML = `
+    <div class="event-container">
+      <!-- Judul: wrap ke bawah, rata kanan -->
+      <div class="event-title-wrap font-jost font-bold text-[2.2vw] text-right w-full leading-tight"
+           style="white-space: normal; word-break: break-word; line-height: 1.3;">
+        ${escapeHTML(event.title)}
+      </div>
+      <!-- Sisa hari di bawah judul -->
+      <div class="text-right mt-2">
+        <span class="font-jost text-[1.8vw] ${cls}">${text}</span>
+      </div>
+    </div>
+  `;
+
+    console.log(`✅ Event #${event.id} rendered: "${event.title.substring(0, 30)}${event.title.length > 30 ? '...' : ''}"`);
   }
 
   // Simplified Hijri date calculation
@@ -1890,105 +1845,141 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
-  // Load finance data
-  async function loadFinanceData() {
+ // Load finance data - DIPERBAIKI UNTUK AMBIL SEMUA DATA
+async function loadFinanceData() {
     try {
-      console.log('💰 Loading finance data...');
+        console.log('💰 Loading finance data...');
 
-      // 1. Ambil Summary tanpa parameter
-      let summaryResult = { success: false, data: [] };
-
-      try {
-        const summaryResponse = await fetch('/api/finances/summary');
-        if (summaryResponse.ok) {
-          summaryResult = await summaryResponse.json();
-        } else {
-          console.log('Summary API tidak tersedia, menggunakan fallback');
+        // 1. AMBIL SEMUA TRANSAKSI (tanpa limit) untuk menghitung saldo total
+        let allTransactions = [];
+        try {
+            const response = await fetch('/api/finances'); // TANPA PARAMETER LIMIT
+            if (response.ok) {
+                const result = await response.json();
+                allTransactions = result.data || [];
+                console.log(`✅ Berhasil mengambil ${allTransactions.length} transaksi (semua data)`);
+            } else {
+                console.log('⚠️ Gagal mengambil transaksi, status:', response.status);
+            }
+        } catch (error) {
+            console.error('❌ Error fetching all transactions:', error);
         }
-      } catch (summaryError) {
-        console.log('Error fetching summary:', summaryError);
-      }
 
-      // 2. Ambil 5 Transaksi Terakhir
-      let recentResult = { success: false, data: [] };
-      try {
-        const recentResponse = await fetch('/api/finances?limit=5');
-        if (recentResponse.ok) {
-          recentResult = await recentResponse.json();
+        // 2. HITUNG SALDO TOTAL dari SEMUA transaksi
+        const totalIncome = allTransactions
+            .filter(t => t.type === 'masuk')
+            .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+
+        const totalExpense = allTransactions
+            .filter(t => t.type === 'keluar')
+            .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+
+        const totalBalance = totalIncome - totalExpense;
+
+        console.log('💰 Total dari semua transaksi:', {
+            income: totalIncome,
+            expense: totalExpense,
+            balance: totalBalance
+        });
+
+        // 3. AMBIL 10 TRANSAKSI TERBARU UNTUK DITAMPILKAN DI TABEL
+        let recentTransactions = [];
+        try {
+            const recentResponse = await fetch('/api/finances?limit=10');
+            if (recentResponse.ok) {
+                const recentResult = await recentResponse.json();
+                recentTransactions = recentResult.data || [];
+                console.log(`✅ Berhasil mengambil ${recentTransactions.length} transaksi terbaru untuk tabel`);
+            }
+        } catch (error) {
+            console.error('❌ Error fetching recent transactions:', error);
         }
-      } catch (recentError) {
-        console.log('Error fetching recent transactions:', recentError);
-      }
 
-      // Hitung summary dari transaksi jika tidak ada dari API
-      let summary;
-      if (summaryResult.success && summaryResult.data && summaryResult.data.length > 0) {
-        // Jika API mengembalikan array, ambil yang pertama atau akumulasi
-        const summaries = summaryResult.data;
-        summary = {
-          total_income: summaries.reduce((sum, item) => sum + (parseFloat(item.total_income) || 0), 0),
-          total_expense: summaries.reduce((sum, item) => sum + (parseFloat(item.total_expense) || 0), 0),
-          balance: summaries.reduce((sum, item) => sum + (parseFloat(item.balance) || 0), 0)
+        // 4. UPDATE TAMPILAN
+        updateFinanceDisplay({
+            total_income: totalIncome,
+            total_expense: totalExpense,
+            balance: totalBalance
+        }, recentTransactions);
+
+        STATE.financeSummary = {
+            total_income: totalIncome,
+            total_expense: totalExpense,
+            balance: totalBalance
         };
-      } else {
-        // Hitung manual dari transaksi
-        const transactions = recentResult.data || [];
-        const totalIncome = transactions
-          .filter(t => t.type === 'masuk')
-          .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-
-        const totalExpense = transactions
-          .filter(t => t.type === 'keluar')
-          .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-
-        summary = {
-          total_income: totalIncome,
-          total_expense: totalExpense,
-          balance: totalIncome - totalExpense
-        };
-      }
-
-      // Update tampilan
-      updateFinanceDisplay(summary, recentResult.data || []);
-      STATE.financeSummary = summary;
-
-      console.log('✅ Finance data loaded:', summary);
 
     } catch (error) {
-      console.error('❌ Error loading finance data:', error);
-      updateFinanceDisplay({ total_income: 0, total_expense: 0, balance: 0 }, []);
+        console.error('❌ Error loading finance data:', error);
+        updateFinanceDisplay({ total_income: 0, total_expense: 0, balance: 0 }, []);
     }
-  }
+}
+
+// Update finance display - DIPERBAIKI
+function updateFinanceDisplay(summary, transactions) {
+    // Format Rupiah
+    const formatRupiah = (num) => {
+        if (num === undefined || num === null) return 'Rp 0';
+        return 'Rp ' + Number(num).toLocaleString('id-ID');
+    };
+
+    const balance = summary.balance || 0;
+    const income = summary.total_income || 0;
+    const expense = summary.total_expense || 0;
+
+    console.log('📊 Update display dengan saldo:', balance);
+
+    // Update saldo
+    setText('fin-saldo', formatRupiah(balance));
+
+    // Update last update dengan format hari, tanggal, tahun
+    const now = new Date();
+    const options = { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+    };
+    setText('finance-last-update', `Update: ${now.toLocaleDateString('id-ID', options)}`);
+
+    // Update tabel transaksi (hanya untuk tampilan, tidak mempengaruhi saldo)
+    updateTransactionTables(transactions);
+
+    // Render chart jika ada elemen chart
+    renderFinanceChart(income, expense);
+}
 
   // Update finance display
   function updateFinanceDisplay(summary, transactions) {
-    // A. Update Kartu Atas (Format Rupiah)
+    // Format Rupiah
     const formatRupiah = (num) => {
       if (num === undefined || num === null) return 'Rp 0';
       return 'Rp ' + Number(num).toLocaleString('id-ID');
     };
 
-    // Gunakan balance dari summary, fallback ke 0
-    const balance = summary.balance || summary.current_balance || 0;
+    const balance = summary.balance || 0;
     const income = summary.total_income || 0;
     const expense = summary.total_expense || 0;
 
+    // Update saldo
     setText('fin-saldo', formatRupiah(balance));
-    setText('fin-masuk', formatRupiah(income));
-    setText('fin-keluar', formatRupiah(expense));
 
-    setText('finance-last-update', `Update: ${new Date().toLocaleTimeString('id-ID', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })}`);
+    // Update last update dengan format hari, tanggal, tahun
+    const now = new Date();
+    const options = {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    };
+    setText('finance-last-update', `Update: ${now.toLocaleDateString('id-ID', options)}`);
 
-    // B. Update Tabel Transaksi Terakhir (5 kiri, 5 kanan)
+    // Update tabel transaksi
     updateTransactionTables(transactions);
 
-    // C. Render Grafik Donut
+    // Render chart jika ada elemen chart
     renderFinanceChart(income, expense);
   }
+
 
   function updateTransactionTables(transactions) {
     const leftTableBody = document.getElementById('recent-transactions-body');
@@ -2003,87 +1994,86 @@ document.addEventListener('DOMContentLoaded', async () => {
     leftTableBody.innerHTML = '';
     rightTableBody.innerHTML = '';
 
+    // Jika tidak ada transaksi
     if (!transactions || transactions.length === 0) {
-      // Tampilkan pesan kosong di kedua tabel
       const emptyMessage = '<tr><td colspan="3" class="text-center py-4 text-gray-400">Belum ada data transaksi</td></tr>';
       leftTableBody.innerHTML = emptyMessage;
       rightTableBody.innerHTML = emptyMessage;
       return;
     }
 
-    // Format fungsi untuk membuat baris transaksi
-    const createTransactionRow = (trx) => {
-      const isMasuk = trx.type === 'masuk';
-      const colorClass = isMasuk ? 'text-green-600' : 'text-red-600';
-      const date = new Date(trx.transaction_date).toLocaleDateString('id-ID', {
+    // Format tanggal Indonesia
+    const formatDate = (dateString) => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('id-ID', {
         day: 'numeric',
         month: 'short'
       });
+    };
+
+    // Buat baris transaksi
+    const createRow = (trx, index) => {
+      const isMasuk = trx.type === 'masuk';
+      const colorClass = isMasuk ? 'text-green-600' : 'text-red-600';
+      const amount = parseFloat(trx.amount) || 0;
 
       return `
-        <tr class="border-b border-gray-100 last:border-0">
-            <td class="py-[0.8vw] text-gray-500 w-[20%]">${date}</td>
-            <td class="py-[0.8vw] font-medium w-[50%] truncate pr-[1vw]" title="${trx.category || trx.description || '-'}">
-                ${trx.category || trx.description || '-'}
-            </td>
-            <td class="py-[0.8vw] font-bold text-right ${colorClass} w-[30%]">
-                ${formatRupiah(trx.amount)}
-            </td>
-        </tr>
+            <tr class="border-b border-gray-100 last:border-0">
+                <td class="py-[0.8vw] text-gray-500 w-[20%]">${formatDate(trx.transaction_date)}</td>
+                <td class="py-[0.8vw] font-medium w-[50%] truncate pr-[1vw]" title="${trx.category || trx.description || '-'}">
+                    ${trx.category || trx.description || '-'}
+                </td>
+                <td class="py-[0.8vw] font-bold text-right ${colorClass} w-[30%]">
+                    Rp ${amount.toLocaleString('id-ID')}
+                </td>
+            </tr>
         `;
     };
 
-    // Urutkan transaksi berdasarkan tanggal (terbaru ke terlama)
-    const sortedTransactions = [...transactions].sort((a, b) =>
+    // Urutkan transaksi dari yang terbaru
+    const sorted = [...transactions].sort((a, b) =>
       new Date(b.transaction_date) - new Date(a.transaction_date)
     );
 
-    // Ambil 10 transaksi terbaru
-    const latestTransactions = sortedTransactions.slice(0, 10);
+    // Ambil 10 transaksi terbaru (atau semua jika kurang)
+    const latest = sorted.slice(0, 10);
 
-    // Pisahkan menjadi 2 bagian: kiri (index 0-4) dan kanan (index 5-9)
-    const leftTransactions = latestTransactions.slice(0, 5);
-    const rightTransactions = latestTransactions.slice(5, 10);
+    // Pisahkan menjadi kiri (0-4) dan kanan (5-9)
+    const leftItems = latest.slice(0, 5);
+    const rightItems = latest.slice(5, 10);
+
+    console.log(`📊 Transaksi: ${leftItems.length} kiri, ${rightItems.length} kanan`);
 
     // Isi tabel kiri
-    leftTransactions.forEach(trx => {
-      leftTableBody.insertAdjacentHTML('beforeend', createTransactionRow(trx));
-    });
-
-    // Jika tabel kiri kurang dari 5, tambahkan baris kosong
-    if (leftTransactions.length < 5) {
-      const emptyRows = 5 - leftTransactions.length;
-      for (let i = 0; i < emptyRows; i++) {
-        leftTableBody.insertAdjacentHTML('beforeend', `
-            <tr class="border-b border-gray-100 last:border-0">
-                <td class="py-[0.8vw] text-gray-300 w-[20%]">-</td>
-                <td class="py-[0.8vw] text-gray-300 w-[50%]">-</td>
-                <td class="py-[0.8vw] text-gray-300 text-right w-[30%]">-</td>
-            </tr>
-            `);
-      }
+    if (leftItems.length > 0) {
+      leftItems.forEach((trx, idx) => {
+        leftTableBody.insertAdjacentHTML('beforeend', createRow(trx, idx));
+      });
+    } else {
+      leftTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-400">Tidak ada transaksi</td></tr>';
     }
 
     // Isi tabel kanan
-    rightTransactions.forEach(trx => {
-      rightTableBody.insertAdjacentHTML('beforeend', createTransactionRow(trx));
-    });
-
-    // Jika tabel kanan kurang dari 5, tambahkan baris kosong
-    if (rightTransactions.length < 5) {
-      const emptyRows = 5 - rightTransactions.length;
-      for (let i = 0; i < emptyRows; i++) {
-        rightTableBody.insertAdjacentHTML('beforeend', `
-            <tr class="border-b border-gray-100 last:border-0">
-                <td class="py-[0.8vw] text-gray-300 w-[20%]">-</td>
-                <td class="py-[0.8vw] text-gray-300 w-[50%]">-</td>
-                <td class="py-[0.8vw] text-gray-300 text-right w-[30%]">-</td>
-            </tr>
-            `);
+    if (rightItems.length > 0) {
+      rightItems.forEach((trx, idx) => {
+        rightTableBody.insertAdjacentHTML('beforeend', createRow(trx, idx + 5));
+      });
+    } else {
+      // Jika tidak ada transaksi di kanan, tampilkan baris kosong agar tetap rapi
+      let emptyRows = '';
+      for (let i = 0; i < 5; i++) {
+        emptyRows += `
+                <tr class="border-b border-gray-100 last:border-0">
+                    <td class="py-[0.8vw] text-gray-300 w-[20%]">-</td>
+                    <td class="py-[0.8vw] text-gray-300 w-[50%]">-</td>
+                    <td class="py-[0.8vw] text-gray-300 text-right w-[30%]">-</td>
+                </tr>
+            `;
       }
+      rightTableBody.innerHTML = emptyRows;
     }
 
-    console.log(`✅ Transaction tables updated: ${leftTransactions.length} left, ${rightTransactions.length} right`);
+    console.log(`✅ Transaction tables updated: ${leftItems.length} kiri, ${rightItems.length} kanan`);
   }
 
   // Tambahkan fungsi formatRupiah di dalam scope yang sama
@@ -2263,6 +2253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       localStorage.setItem('adzan_timestamp', adzanTime.getTime().toString());
       localStorage.setItem('iqomah_duration', iqomahDuration.toString());
       localStorage.setItem('iqomah_redirect_minutes', redirectMinutes.toString());
+      localStorage.setItem('currentPrayer', nextPrayer.name.toLowerCase());
 
       console.log(`🚀 Redirecting to adzan page for ${nextPrayer.name} in ${diffMinutes} minutes`);
       console.log(`📊 Iqomah duration: ${iqomahDuration} minutes`);
@@ -2404,66 +2395,69 @@ document.addEventListener('DOMContentLoaded', async () => {
       const defaultItem = document.createElement('div');
       defaultItem.className = 'content-item active default-content';
       defaultItem.innerHTML = `
-      <div class="w-full h-full flex items-center justify-center bg-gradient-to-r from-blue-50 to-indigo-50">
-        <div class="text-center p-8">
-          <h3 class="text-4xl font-bold text-gray-800 mb-4">Selamat Datang</h3>
-          <p class="text-2xl text-gray-600">Masjid Al-Ikhlas</p>
-        </div>
-      </div>
-    `;
+            <div class="w-full h-full flex items-center justify-center bg-gradient-to-r from-blue-50 to-indigo-50">
+                <div class="text-center p-8">
+                    <h3 class="text-4xl font-bold text-gray-800 mb-4">Selamat Datang</h3>
+                    <p class="text-2xl text-gray-600">Masjid Al-Ikhlas</p>
+                </div>
+            </div>
+        `;
       rotator.appendChild(defaultItem);
-      return;
+    } else {
+      // Add content items
+      activeContents.forEach((content, index) => {
+        const item = document.createElement('div');
+        item.className = `content-item ${index === 0 ? 'active' : ''}`;
+        item.dataset.contentId = content.id;
+        item.dataset.contentType = content.content_type;
+
+        const rawType = content.content_type?.toLowerCase() || 'text';
+        console.log(`🎨 Rendering konten #${content.id}: ${content.title} (type: ${rawType})`);
+
+        if (rawType === 'image' && content.image_url) {
+          item.innerHTML = `
+                    <div class="w-full h-full flex items-center justify-center bg-gray-900">
+                        <img src="${content.image_url}" alt="${escapeHTML(content.title)}"
+                            class="max-w-full max-h-full object-contain">
+                    </div>
+                `;
+        } else if (rawType === 'video' && content.video_url) {
+          item.innerHTML = `
+                    <div class="w-full h-full flex items-center justify-center bg-gray-900">
+                        <video src="${content.video_url}" autoplay muted loop playsinline
+                            class="max-w-full max-h-full object-contain">
+                            Browser Anda tidak mendukung tag video.
+                        </video>
+                    </div>
+                `;
+        } else if (rawType === 'announcement' || rawType === 'text') {
+          item.innerHTML = renderAnnouncement(content);
+        } else {
+          item.innerHTML = `
+                    <div class="w-full h-full flex items-center justify-center p-8 bg-gradient-to-r from-blue-50 to-indigo-50">
+                        <div class="text-center">
+                            <h3 class="text-4xl font-bold text-gray-800 mb-4">${escapeHTML(content.title || 'Judul')}</h3>
+                            ${content.content_text ? `<p class="text-2xl text-gray-600">${escapeHTML(content.content_text)}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+        }
+        rotator.appendChild(item);
+      });
     }
-
-    // Add content items
-    activeContents.forEach((content, index) => {
-      const item = document.createElement('div');
-      item.className = `content-item ${index === 0 ? 'active' : ''}`;
-      item.dataset.contentId = content.id;
-      item.dataset.contentType = content.content_type;
-
-      // Normalisasi tipe konten
-      const rawType = content.content_type?.toLowerCase() || 'text';
-      console.log(`🎨 Rendering konten #${content.id}: ${content.title} (type: ${rawType})`);
-
-      if (rawType === 'image' && content.image_url) {
-        item.innerHTML = `
-        <div class="w-full h-full flex items-center justify-center bg-gray-900">
-          <img src="${content.image_url}" alt="${escapeHTML(content.title)}"
-               class="max-w-full max-h-full object-contain">
-        </div>
-      `;
-      } else if (rawType === 'video' && content.video_url) {
-        item.innerHTML = `
-        <div class="w-full h-full flex items-center justify-center bg-gray-900">
-          <video src="${content.video_url}" autoplay muted loop playsinline
-                 class="max-w-full max-h-full object-contain">
-            Browser Anda tidak mendukung tag video.
-          </video>
-        </div>
-      `;
-      } else if (rawType === 'announcement' || rawType === 'text') {
-        item.innerHTML = renderAnnouncement(content);
-      } else {
-        item.innerHTML = `
-        <div class="w-full h-full flex items-center justify-center p-8 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div class="text-center">
-            <h3 class="text-4xl font-bold text-gray-800 mb-4">${escapeHTML(content.title || 'Judul')}</h3>
-            ${content.content_text ? `<p class="text-2xl text-gray-600">${escapeHTML(content.content_text)}</p>` : ''}
-          </div>
-        </div>
-      `;
-      }
-
-      rotator.appendChild(item);
-    });
 
     // CEK SETTING FINANCE DISPLAY SEBELUM MENAMBAHKAN FINANCE CONTENT
     const showFinance = await shouldShowFinanceDisplay();
     console.log(`💰 Finance display setting: ${showFinance ? 'SHOW' : 'HIDE'}`);
 
     if (showFinance) {
+      // Tambahkan finance item di posisi setelah konten terakhir
       addFinanceContentItem(rotator);
+
+      // Load data keuangan
+      setTimeout(() => {
+        loadFinanceData();
+      }, 500);
     }
 
     console.log(`✅ Total items in rotator: ${rotator.children.length}`);
@@ -2495,33 +2489,37 @@ document.addEventListener('DOMContentLoaded', async () => {
       await loadPrayerTimes();
       await loadMasjidInfo();
       await updateImsakDisplay();
-      initFinanceDisplay();
 
       // Start clock
       startClock();
-      setInterval(checkAdzanRedirect, 1000);
       startAdzanChecking();
+      startHijriDateAutoRefresh();
 
-      // Load semua data termasuk running text
+      // Load semua data
       console.log('📥 Loading all data...');
       const loadPromises = [
         loadRunningText(),
-        loadContent(),
+        loadContent(),  // Ini akan memuat konten dan finance item
         loadEvents(),
-        loadFinanceData(),
         updateDateDisplay()
       ];
 
       await Promise.allSettled(loadPromises);
 
-      // Initialize WebSocket untuk real-time updates
+      // Initialize WebSocket
       initWebSocket();
 
-      // Start auto-refresh untuk running text (setiap 30 detik)
+      // Auto-refresh running text
       setInterval(() => {
         console.log('🔄 Auto-refresh running text...');
         loadRunningText();
       }, 30000);
+
+      // Auto-refresh finance data setiap 2 menit
+      setInterval(() => {
+        console.log('🔄 Auto-refresh finance data...');
+        loadFinanceData();
+      }, 120000);
 
       console.log('✅ System initialized successfully');
 
@@ -2555,22 +2553,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  window.refreshHijriDate = async function () {
-    console.log('🔄 Manual refresh tanggal Hijriyah...');
+  window.refreshHijriDate = async function (force = true) {
+    console.log('🔄 Manual refresh Hijri...');
 
-    // Hapus cache
-    localStorage.removeItem('hijri_date_cache');
-    localStorage.removeItem('hijri_date_cache_timestamp');
+    if (force) {
+      localStorage.removeItem('hijri_date_cache');
+      localStorage.removeItem('hijri_date_cache_timestamp');
+      localStorage.removeItem('hijri_date_cache_date');
+    }
 
-    // Reset state
     STATE.hijriDate = null;
     STATE.hijriSource = null;
 
-    // Update display
-    await updateDateDisplay();
+    const result = await getHijriDate();
+    await updateAllDateDisplays();
 
-    showToast(`📅 Tanggal Hijriyah: ${STATE.hijriDate}`, 'info');
+    showToast(`📅 Hijriyah: ${result.formatted} (${result.source})`, 'success');
+    return result;
   };
+
+  async function updateDateDisplay() {
+    const dateItem = document.getElementById('date-display');
+    if (!dateItem) return;
+
+    const now = new Date();
+
+    // Gregorian date
+    const gregorianOptions = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    };
+    const gregorianDate = now.toLocaleDateString('id-ID', gregorianOptions);
+
+    // Ambil tanggal Hijriyah dari berbagai sumber
+    const hijriData = await getHijriDate();
+
+    // Simpan ke STATE
+    STATE.hijriDate = hijriData.formatted;
+    STATE.hijriDay = hijriData.day;
+    STATE.hijriMonth = hijriData.month;
+    STATE.hijriYear = hijriData.year;
+    STATE.hijriSource = hijriData.source;
+    STATE.lastHijriUpdate = new Date();
+
+    // Tampilkan di element
+    dateItem.innerHTML = `
+        <div class="text-right">
+            <p class="font-bold text-2xl">${gregorianDate}</p>
+            <p class="text-xl text-gray-600" title="Sumber: ${hijriData.source}">
+                ${hijriData.formatted}
+                ${hijriData.source === 'cache' ? '📦' :
+        hijriData.source === 'settings' ? '⚙️' :
+          hijriData.source === 'api' ? '' : '📅'}
+            </p>
+        </div>
+    `;
+
+    console.log(`📅 Hijri date updated: ${hijriData.formatted} (${hijriData.source})`);
+  }
+
 
   window.showHijriDateInfo = function () {
     console.log('📊 Hijri Date Info:', {
@@ -2638,8 +2681,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   };
 
-  window.addEventListener('resize', handleResize);
-
   // const adzanScript = document.createElement('script');
   // adzanScript.src = '/adzan-check.js';
   // document.head.appendChild(adzanScript);
@@ -2647,17 +2688,3 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Start the system
   initializeSystem();
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-

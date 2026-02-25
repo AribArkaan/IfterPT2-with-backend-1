@@ -210,6 +210,97 @@
     </style>
 </head>
 
+<!-- AUTH PROTECTION SCRIPT - TARUH DI HEAD -->
+<script>
+    // ==================== AUTH PROTECTION ====================
+
+    (function () {
+        // Cek autentikasi sebelum halaman dimuat
+        const token = localStorage.getItem('auth_token');
+        const tokenExpiry = localStorage.getItem('token_expiry');
+
+        if (!token || !tokenExpiry || new Date().getTime() > parseInt(tokenExpiry)) {
+            // Clear invalid auth
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('token_expiry');
+            localStorage.removeItem('user_data');
+
+            // Redirect ke login
+            window.location.replace('/login.html');
+            return;
+        }
+
+        // Set global auth header untuk fetch requests
+        window.AUTH_TOKEN = token;
+
+        // Override fetch untuk include token
+        const originalFetch = window.fetch;
+        window.fetch = function (...args) {
+            let [url, config = {}] = args;
+
+            // Tambah auth header untuk API requests
+            if (url.includes('/api/') && window.AUTH_TOKEN) {
+                config.headers = {
+                    ...config.headers,
+                    'Authorization': `Bearer ${window.AUTH_TOKEN}`
+                };
+            }
+
+            return originalFetch(url, config).then(response => {
+                // Handle 401/403
+                if (response.status === 401 || response.status === 403) {
+                    clearAuth();
+                    window.location.replace('/login.html');
+                }
+                return response;
+            });
+        };
+    })();
+
+    function clearAuth() {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('token_expiry');
+        localStorage.removeItem('user_data');
+    }
+
+    async function logout() {
+        if (!confirm('Apakah Anda yakin ingin logout?')) {
+            return;
+        }
+
+        try {
+            showToast('Sedang logout...', 'info');
+
+            // Panggil API logout
+            await fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                }
+            });
+        } catch (err) {
+            console.error('Gagal menghubungi server saat logout', err);
+        } finally {
+            // Hapus semua data auth dari localStorage
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('token_expiry');
+            localStorage.removeItem('user_data');
+
+            // Redirect ke login.html
+            window.location.href = '/login.html';
+        }
+    }
+
+    // Get current user
+    function getCurrentUser() {
+        try {
+            return JSON.parse(localStorage.getItem('user_data') || '{}');
+        } catch {
+            return {};
+        }
+    }
+</script>
+
 <body class="bg-gray-50">
     <!-- Mobile Menu Overlay -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden"
@@ -273,19 +364,21 @@
                     class="tab-btn w-full text-left p-2 md:p-3 rounded-lg hover:bg-blue-700 transition flex items-center text-sm md:text-base">
                     <i class="fas fa-cog mr-3 w-5"></i> <span class="flex-1">Settings</span>
                 </button>
-                <button onclick="showTab('manual-time')"
+                <!-- <button onclick="showTab('manual-time')"
                     class="tab-btn w-full text-left p-2 md:p-3 rounded-lg hover:bg-blue-700 transition flex items-center text-sm md:text-base">
                     <i class="fas fa-calendar mr-3 w-5"></i> <span class="flex-1">Waktu Manual</span>
+                </button> -->
+                <button onclick="logout()"
+                    class="tab-btn w-full text-left p-2 md:p-3 rounded-lg hover:bg-red-600/80 transition flex items-center text-sm md:text-base mt-4 border-t border-blue-400/30 pt-4">
+                    <i class="fas fa-sign-out-alt mr-3 w-5"></i>
+                    <span class="flex-1">Logout</span>
                 </button>
             </nav>
 
-            <div class="mt-auto pt-4 md:pt-6 border-t border-blue-700">
-                <div class="text-center">
-                    <p class="text-blue-200 text-xs md:text-sm">Status: <span id="connection-status"
-                            class="text-green-400">● Terhubung</span></p>
-                    <button onclick="logout()" class="mt-4 text-red-300 hover:text-red-100 text-xs md:text-sm">
-                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                    </button>
+            <div class="mt-6 pt-4 border-t border-blue-400/30">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-blue-200">Status:</span>
+                    <span id="connection-status" class="text-green-400">● Terhubung</span>
                 </div>
             </div>
         </div>
@@ -1668,12 +1761,6 @@
         function saveSettings() { showToast('Pengaturan berhasil disimpan'); }
         function setGregorianTime() { showToast('Waktu masehi diatur'); }
         function setHijriDate() { showToast('Tanggal hijriyah diatur'); }
-        function logout() {
-            if (confirm('Yakin ingin logout?')) {
-                showToast('Logout berhasil');
-                setTimeout(() => { window.location.reload(); }, 1500);
-            }
-        }
         function updateOpacityValue(val) {
             document.getElementById('opacity-value').textContent = val;
         }

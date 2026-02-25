@@ -281,7 +281,10 @@
             const now = Date.now();
             const distance = iqomahEndTime - now;
             const urlParams = new URLSearchParams(window.location.search);
-            const currentPrayer = urlParams.get('prayer') || localStorage.getItem('currentPrayer') || 'dzuhur';
+            const currentPrayer = urlParams.get('prayer') ||
+                localStorage.getItem('adzan_prayer_name') ||
+                localStorage.getItem('currentPrayer') ||
+                'dzuhur';
 
             if (distance <= 0) {
                 clearInterval(interval);

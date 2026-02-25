@@ -78,11 +78,16 @@ document.addEventListener('DOMContentLoaded', function () {
         // Setup event listeners
         setupEventListeners();
 
+        setupRunningTextListeners();
+
         // Set default dates
         setDefaultDates();
 
         // Load initial data
         loadAllData();
+
+        // Load user info
+        // loadUserInfo();
 
         loadRamadhanMode();
 
@@ -427,6 +432,20 @@ function formatAladhanTimings(timings) {
 
     return prayers;
 }
+
+// Load user info ke sidebar
+// function loadUserInfo() {
+//     const user = getCurrentUser();
+//     const userInfoEl = document.getElementById('user-info');
+//     const userNameEl = document.getElementById('user-name');
+//     const userRoleEl = document.getElementById('user-role');
+
+//     if (user && user.username) {
+//         userNameEl.textContent = user.full_name || user.username;
+//         userRoleEl.textContent = user.role || 'operator';
+//         userInfoEl.classList.remove('hidden');
+//     }
+// }
 
 function displayApiResult(prayers) {
     const resultDiv = document.getElementById('api-result');
@@ -1189,7 +1208,7 @@ async function loadAllData() {
         try {
             const [eventsResponse, financeResponse] = await Promise.all([
                 fetch('/api/events'),
-                fetch('/api/finances/summary?start_date=' + new Date().toISOString().split('T')[0])
+                fetch('/api/finances/summary') // Hapus parameter start_date
             ]);
 
             if (eventsResponse.ok) {
@@ -1199,10 +1218,19 @@ async function loadAllData() {
 
             if (financeResponse.ok) {
                 const financeData = await financeResponse.json();
-                financeSummary = financeData.data && financeData.data.length > 0 ? financeData.data[0] : {};
+                // Data bisa berupa array atau object, tangani dengan aman
+                if (financeData.data) {
+                    if (Array.isArray(financeData.data)) {
+                        financeSummary = financeData.data.length > 0 ? financeData.data[0] : {};
+                    } else {
+                        financeSummary = financeData.data;
+                    }
+                }
+            } else {
+                console.log('⚠️ Finance API returned:', financeResponse.status);
             }
         } catch (apiError) {
-            console.log('Some APIs not available, using defaults');
+            console.log('Some APIs not available, using defaults', apiError.message);
         }
 
         updateDashboard(prayers, events, financeSummary);
@@ -1608,12 +1636,6 @@ function refreshPreview() {
     showToast('Preview diperbarui', 'info');
 }
 
-function logout() {
-    if (confirm('Apakah Anda yakin ingin logout?')) {
-        window.location.href = '/';
-    }
-}
-
 // Setup event listeners
 function setupEventListeners() {
     const runningTextContent = document.getElementById('running-text-content');
@@ -1762,11 +1784,6 @@ function setupRunningTextListeners() {
 
     console.log('✅ Running text listeners setup complete');
 }
-
-document.addEventListener('DOMContentLoaded', function () {
-    // Setup listeners untuk running text
-    setupRunningTextListeners();
-});
 
 // Form toggle functions
 function showManualInput() {
@@ -2102,7 +2119,7 @@ async function saveRunningText() {
         console.error('Error saving running text:', error);
         showToast('Gagal menyimpan data: ' + error.message, 'error');
     }
-} F
+}
 
 async function editRunningText(id) {
     try {
@@ -2282,7 +2299,13 @@ async function loadSettings() {
         const result = await response.json();
         const settings = result.data || [];
 
-        // Update form inputs
+        // Convert array to object for easier access
+        const settingsObj = {};
+        settings.forEach(setting => {
+            settingsObj[setting.setting_key] = setting.setting_value;
+        });
+
+        // Update form inputs dengan pengecekan null
         const elements = {
             'setting-masjid-name': 'masjid_name',
             'setting-masjid-address': 'masjid_address',
@@ -2296,18 +2319,14 @@ async function loadSettings() {
             'setting-iqomah-duration': 'iqomah_duration'
         };
 
-        // Convert array to object for easier access
-        const settingsObj = {};
-        settings.forEach(setting => {
-            settingsObj[setting.setting_key] = setting.setting_value;
-        });
-
         Object.entries(elements).forEach(([elementId, settingKey]) => {
             const element = document.getElementById(elementId);
             if (element && settingsObj[settingKey] !== undefined) {
                 element.value = settingsObj[settingKey];
             }
         });
+
+        console.log('✅ Settings loaded successfully');
 
     } catch (error) {
         console.error('Error loading settings:', error);
@@ -2316,35 +2335,62 @@ async function loadSettings() {
 }
 
 async function saveSettings() {
+    // Periksa apakah element-element yang diperlukan ada
+    const masjidNameInput = document.getElementById('setting-masjid-name');
+    const masjidAddressInput = document.getElementById('setting-masjid-address');
+    const latitudeInput = document.getElementById('setting-latitude');
+    const longitudeInput = document.getElementById('setting-longitude');
+    const calculationMethodInput = document.getElementById('setting-calculation-method');
+    const autoAdzanInput = document.getElementById('setting-auto-adzan');
+    const contentRotationInput = document.getElementById('setting-content-rotation');
+    const dateRotationInput = document.getElementById('setting-date-rotation');
+    const adzanRedirectInput = document.getElementById('setting-adzan-redirect');
+    const iqomahDurationInput = document.getElementById('setting-iqomah-duration');
+
+    // Validasi input yang diperlukan
+    if (!masjidNameInput || !masjidAddressInput) {
+        showToast('❌ Elemen form tidak ditemukan', 'error');
+        return;
+    }
+
     const settings = [
-        { key: 'masjid_name', value: document.getElementById('setting-masjid-name').value },
-        { key: 'masjid_address', value: document.getElementById('setting-masjid-address').value },
-        { key: 'latitude', value: document.getElementById('setting-latitude').value },
-        { key: 'longitude', value: document.getElementById('setting-longitude').value },
-        { key: 'prayer_calculation_method', value: document.getElementById('setting-calculation-method').value },
-        { key: 'auto_adzan', value: document.getElementById('setting-auto-adzan').value },
-        { key: 'display_rotation', value: document.getElementById('setting-content-rotation').value },
-        { key: 'date_rotation', value: document.getElementById('setting-date-rotation').value },
-        { key: 'adzan_redirect_minutes', value: document.getElementById('setting-adzan-redirect').value },
-        { key: 'iqomah_duration', value: document.getElementById('setting-iqomah-duration').value }
+        { key: 'masjid_name', value: masjidNameInput.value },
+        { key: 'masjid_address', value: masjidAddressInput.value },
+        { key: 'latitude', value: latitudeInput ? latitudeInput.value : '-6.9419' },
+        { key: 'longitude', value: longitudeInput ? longitudeInput.value : '107.6824' },
+        { key: 'prayer_calculation_method', value: calculationMethodInput ? calculationMethodInput.value : '11' },
+        { key: 'auto_adzan', value: autoAdzanInput ? autoAdzanInput.value : '1' },
+        { key: 'display_rotation', value: contentRotationInput ? contentRotationInput.value : '20' },
+        { key: 'date_rotation', value: dateRotationInput ? dateRotationInput.value : '15' },
+        { key: 'adzan_redirect_minutes', value: adzanRedirectInput ? adzanRedirectInput.value : '5' },
+        { key: 'iqomah_duration', value: iqomahDurationInput ? iqomahDurationInput.value : '10' }
     ];
 
     try {
         // Set timestamp sebelum request
         window._lastUpdateTimestamp = Date.now();
 
+        showToast('⏳ Menyimpan pengaturan...', 'info');
+
         const response = await fetch('/api/settings/bulk', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            },
             body: JSON.stringify({ settings })
         });
 
         const result = await response.json();
 
-        if (response.ok) {
-            // Hanya tampilkan 1 toast untuk aksi ini
+        if (response.ok && result.success) {
             showToast('✅ Pengaturan berhasil disimpan', 'success');
             updatePreview();
+
+            // Refresh data jika perlu
+            if (typeof loadSettings === 'function') {
+                loadSettings();
+            }
         } else {
             showToast(result.error || 'Gagal menyimpan pengaturan', 'error');
         }
@@ -2354,6 +2400,7 @@ async function saveSettings() {
         showToast('Koneksi error. Coba lagi.', 'error');
     }
 }
+
 
 async function exportFinanceToExcel() {
     try {
@@ -4543,29 +4590,54 @@ async function loadFinanceData() {
 
 async function loadFinanceDisplaySetting() {
     try {
-        // Mengambil data dari endpoint yang sudah ada di server.js Anda
         const response = await fetch('/api/settings/finance_display');
+
+        if (!response.ok) {
+            // Jika 404, gunakan default
+            if (response.status === 404) {
+                console.log('⚠️ Finance display setting not found, using default');
+                const toggle = document.getElementById('finance-display-toggle');
+                const label = document.getElementById('finance-toggle-label');
+
+                if (toggle) toggle.checked = true;
+                if (label) label.textContent = 'Aktif';
+                localStorage.setItem('finance_display', '1');
+                return;
+            }
+            throw new Error('Failed to fetch');
+        }
+
         const result = await response.json();
 
-        if (result.success) {
-            // result.data.finance_display akan bernilai true atau false
+        if (result.success && result.data) {
             const isEnabled = result.data.finance_display;
-
             const toggle = document.getElementById('finance-display-toggle');
             const label = document.getElementById('finance-toggle-label');
 
-            // Ubah tampilan toggle sesuai data dari database
             if (toggle) {
                 toggle.checked = isEnabled;
+                if (label) {
+                    label.textContent = isEnabled ? 'Aktif' : 'Nonaktif';
+                }
             }
 
-            // Ubah teks label jika ada
-            if (label) {
-                label.textContent = isEnabled ? 'Aktif' : 'Nonaktif';
-            }
+            localStorage.setItem('finance_display', isEnabled ? '1' : '0');
         }
     } catch (error) {
-        console.error('❌ Gagal memuat status awal toggle keuangan:', error);
+        console.error('Error loading setting:', error);
+        // Fallback ke localStorage
+        const saved = localStorage.getItem('finance_display');
+        const defaultValue = saved ? saved === '1' : true;
+
+        const toggle = document.getElementById('finance-display-toggle');
+        const label = document.getElementById('finance-toggle-label');
+
+        if (toggle) {
+            toggle.checked = defaultValue;
+            if (label) {
+                label.textContent = defaultValue ? 'Aktif' : 'Nonaktif';
+            }
+        }
     }
 }
 

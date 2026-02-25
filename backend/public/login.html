@@ -3,209 +3,318 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Masjid Al-Ikhlas</title>
+    <title>Login - Masjid Al-Ikhlas Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1e1b4b 100%);
+            min-height: 100vh;
         }
-        .login-card {
-            backdrop-filter: blur(10px);
+        
+        .glass-effect {
             background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
         }
-        .input-group {
-            transition: all 0.3s ease;
+        
+        .input-focus:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
         }
-        .input-group:focus-within {
-            transform: translateY(-2px);
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
         }
-    </style>
-</head>
-<body class="min-h-screen flex items-center justify-center p-4">
-    <div class="login-card w-full max-w-md rounded-2xl shadow-2xl p-8">
-        <!-- Header -->
-        <div class="text-center mb-8">
-            <div class="w-20 h-20 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                <span class="text-4xl text-white">🕌</span>
-            </div>
-            <h1 class="text-3xl font-bold text-gray-800">Masjid Al-Ikhlas</h1>
-            <p class="text-gray-600 mt-2">Sistem Informasi Masjid Digital</p>
-        </div>
-
-        <!-- Login Form -->
-        <form id="loginForm" class="space-y-6">
-            <div class="input-group">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                    <i class="fas fa-user mr-2"></i>Username or Email
-                </label>
-                <input type="text" id="username" required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    placeholder="Masukkan username atau email">
-            </div>
-
-            <div class="input-group">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                    <i class="fas fa-lock mr-2"></i>Password
-                </label>
-                <div class="relative">
-                    <input type="password" id="password" required
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        placeholder="Masukkan password">
-                    <button type="button" onclick="togglePassword()" class="absolute right-3 top-3 text-gray-500 hover:text-gray-700">
-                        <i id="toggleIcon" class="fas fa-eye"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="flex items-center justify-between">
-                <label class="flex items-center">
-                    <input type="checkbox" class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                    <span class="ml-2 text-sm text-gray-600">Ingat saya</span>
-                </label>
-                <a href="#" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">Lupa password?</a>
-            </div>
-
-            <button type="submit"
-                class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transform hover:-translate-y-0.5 transition-all duration-200 shadow-lg">
-                <i class="fas fa-sign-in-alt mr-2"></i>Login
-            </button>
-        </form>
-
-        <!-- Register Link -->
-        <div class="mt-6 text-center">
-            <p class="text-gray-600">
-                Belum punya akun? 
-                <a href="/register" class="text-blue-600 hover:text-blue-800 font-semibold hover:underline">
-                    Daftar sekarang
-                </a>
-            </p>
-        </div>
-
-        <!-- Demo Credentials -->
-        <div class="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <p class="text-sm text-gray-600 mb-2">
-                <i class="fas fa-info-circle text-blue-500 mr-1"></i>
-                Demo Akun:
-            </p>
-            <div class="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                    <span class="font-semibold">Admin:</span><br>
-                    user: admin<br>
-                    pass: admin123
-                </div>
-                <div>
-                    <span class="font-semibold">User:</span><br>
-                    user: user<br>
-                    pass: user123
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white hidden transition-all duration-300 z-50"></div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
-    <script>
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.classList.remove('hidden');
-            
-            if (type === 'success') {
-                toast.classList.add('bg-green-500');
-                toast.classList.remove('bg-red-500', 'bg-yellow-500', 'bg-blue-500');
-            } else if (type === 'error') {
-                toast.classList.add('bg-red-500');
-                toast.classList.remove('bg-green-500', 'bg-yellow-500', 'bg-blue-500');
-            } else if (type === 'warning') {
-                toast.classList.add('bg-yellow-500');
-                toast.classList.remove('bg-green-500', 'bg-red-500', 'bg-blue-500');
-            } else {
-                toast.classList.add('bg-blue-500');
-                toast.classList.remove('bg-green-500', 'bg-red-500', 'bg-yellow-500');
+        
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
             }
-            
-            setTimeout(() => {
-                toast.classList.add('hidden');
-            }, 3000);
-        }
-
-        function togglePassword() {
-            const passwordInput = document.getElementById('password');
-            const toggleIcon = document.getElementById('toggleIcon');
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                toggleIcon.classList.remove('fa-eye');
-                toggleIcon.classList.add('fa-eye-slash');
-            } else {
-                passwordInput.type = 'password';
-                toggleIcon.classList.remove('fa-eye-slash');
-                toggleIcon.classList.add('fa-eye');
-            }
-        }
-
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            // Validasi sederhana
-            if (!username || !password) {
-                showToast('Username dan password harus diisi', 'warning');
-                return;
-            }
-            
-            try {
-                showToast('⏳ Sedang login...', 'info');
-                
-                const response = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username, password })
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok && result.success) {
-                    showToast('✅ Login berhasil! Mengalihkan...', 'success');
-                    
-                    // Redirect ke halaman admin setelah 1 detik
-                    setTimeout(() => {
-                        window.location.href = '/admin';
-                    }, 1000);
-                } else {
-                    showToast(result.error || '❌ Login gagal', 'error');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('❌ Koneksi error. Coba lagi.', 'error');
-            }
-        });
-
-        // Cek apakah sudah login
-        async function checkAuth() {
-            try {
-                const response = await fetch('/api/auth/check');
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.success && result.authenticated) {
-                        // Jika sudah login, redirect ke admin
-                        window.location.href = '/admin';
-                    }
-                }
-            } catch (error) {
-                console.error('Error checking auth:', error);
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
         
-        checkAuth();
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        .mosque-pattern {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%23ffffff' fill-opacity='0.1' d='M0,224L48,213.3C96,203,192,181,288,181.3C384,181,480,203,576,224C672,245,768,267,864,261.3C960,256,1056,224,1152,208C1248,192,1344,192,1392,192L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E") no-repeat bottom;
+            background-size: cover;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+    <!-- Background Pattern -->
+    <div class="mosque-pattern"></div>
+    
+    <!-- Decorative Elements -->
+    <div class="fixed top-10 left-10 text-white/20 text-6xl">
+        <i class="fas fa-mosque"></i>
+    </div>
+    <div class="fixed top-10 right-10 text-white/20 text-6xl">
+        <i class="fas fa-moon"></i>
+    </div>
+    
+    <!-- Login Card -->
+    <div class="glass-effect rounded-3xl shadow-2xl w-full max-w-md p-8 animate-fade-in-up relative z-10">
+        <!-- Logo/Header -->
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <i class="fas fa-mosque text-white text-3xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800">Masjid Al-Ikhlas</h1>
+            <p class="text-gray-500 text-sm mt-1">Sistem Digital Masjid</p>
+            <div class="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                <i class="fas fa-shield-alt"></i>
+                Admin Panel
+            </div>
+        </div>
+        
+        <!-- Alert Container -->
+        <div id="alert-container" class="hidden mb-4 p-4 rounded-lg text-sm"></div>
+        
+        <!-- Login Form -->
+        <form id="login-form" class="space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-user text-gray-400 mr-2"></i>Username atau Email
+                </label>
+                <input 
+                    type="text" 
+                    id="username" 
+                    class="w-full px-4 py-3 rounded-xl border border-gray-300 input-focus transition-all outline-none"
+                    placeholder="Masukkan username atau email"
+                    required
+                    autocomplete="username"
+                >
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-lock text-gray-400 mr-2"></i>Password
+                </label>
+                <div class="relative">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 input-focus transition-all outline-none pr-12"
+                        placeholder="Masukkan password"
+                        required
+                        autocomplete="current-password"
+                    >
+                    <button 
+                        type="button" 
+                        id="toggle-password"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-between text-sm">
+                <label class="flex items-center text-gray-600 cursor-pointer">
+                    <input type="checkbox" id="remember-me" class="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    Ingat saya
+                </label>
+                <a href="#" class="text-blue-600 hover:text-blue-800 font-medium">Lupa password?</a>
+            </div>
+            
+            <button 
+                type="submit" 
+                id="login-btn"
+                class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3.5 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg flex items-center justify-center gap-2"
+            >
+                <span id="btn-text">Masuk</span>
+                <i id="btn-icon" class="fas fa-arrow-right"></i>
+                <i id="btn-loading" class="fas fa-circle-notch fa-spin hidden"></i>
+            </button>
+        </form>
+        
+        <!-- Footer -->
+        <div class="mt-8 pt-6 border-t border-gray-200 text-center">
+            <p class="text-xs text-gray-400">
+                © 2024 Masjid Al-Ikhlas. Sistem Digital Masjid.
+            </p>
+            <p class="text-xs text-gray-400 mt-1">
+                Jl. Riung Wulan No. 01
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        // ==================== AUTH UTILITIES ====================
+        
+        const API_BASE_URL = ''; // Sesuaikan dengan base URL Anda
+        
+        // Cek apakah sudah login
+        function checkExistingAuth() {
+            const token = localStorage.getItem('auth_token');
+            const tokenExpiry = localStorage.getItem('token_expiry');
+            
+            if (token && tokenExpiry) {
+                // Cek apakah token masih valid
+                if (new Date().getTime() < parseInt(tokenExpiry)) {
+                    // Redirect ke admin
+                    window.location.href = '/admin.html';
+                    return true;
+                } else {
+                    // Token expired, hapus
+                    clearAuth();
+                }
+            }
+            return false;
+        }
+        
+        // Clear auth data
+        function clearAuth() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('token_expiry');
+            localStorage.removeItem('user_data');
+        }
+        
+        // Save auth data
+        function saveAuth(token, user, remember = false) {
+            const expiryTime = remember 
+                ? new Date().getTime() + (7 * 24 * 60 * 60 * 1000) // 7 hari
+                : new Date().getTime() + (24 * 60 * 60 * 1000); // 24 jam
+            
+            localStorage.setItem('auth_token', token);
+            localStorage.setItem('token_expiry', expiryTime.toString());
+            localStorage.setItem('user_data', JSON.stringify(user));
+        }
+        
+        // Show alert
+        function showAlert(message, type = 'error') {
+            const container = document.getElementById('alert-container');
+            const colors = {
+                error: 'bg-red-50 text-red-700 border-red-200',
+                success: 'bg-green-50 text-green-700 border-green-200',
+                info: 'bg-blue-50 text-blue-700 border-blue-200'
+            };
+            
+            container.className = `mb-4 p-4 rounded-lg text-sm border ${colors[type]}`;
+            container.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            container.classList.remove('hidden');
+        }
+        
+        // Hide alert
+        function hideAlert() {
+            document.getElementById('alert-container').classList.add('hidden');
+        }
+        
+        // ==================== EVENT LISTENERS ====================
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Cek auth existing
+            if (checkExistingAuth()) return;
+            
+            // Toggle password visibility
+            const toggleBtn = document.getElementById('toggle-password');
+            const passwordInput = document.getElementById('password');
+            
+            toggleBtn.addEventListener('click', () => {
+                const type = passwordInput.type === 'password' ? 'text' : 'password';
+                passwordInput.type = type;
+                toggleBtn.innerHTML = `<i class="fas ${type === 'password' ? 'fa-eye' : 'fa-eye-slash'}"></i>`;
+            });
+            
+            // Form submit
+            const form = document.getElementById('login-form');
+            const loginBtn = document.getElementById('login-btn');
+            const btnText = document.getElementById('btn-text');
+            const btnIcon = document.getElementById('btn-icon');
+            const btnLoading = document.getElementById('btn-loading');
+            
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                hideAlert();
+                
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value;
+                const rememberMe = document.getElementById('remember-me').checked;
+                
+                // Validasi
+                if (!username || !password) {
+                    showAlert('Username dan password wajib diisi.');
+                    form.classList.add('shake');
+                    setTimeout(() => form.classList.remove('shake'), 500);
+                    return;
+                }
+                
+                // Loading state
+                loginBtn.disabled = true;
+                btnText.textContent = 'Memproses...';
+                btnIcon.classList.add('hidden');
+                btnLoading.classList.remove('hidden');
+                loginBtn.classList.add('opacity-75', 'cursor-not-allowed');
+                
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ username, password })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Simpan auth data
+                        saveAuth(result.data.token, result.data.user, rememberMe);
+                        
+                        // Show success
+                        showAlert('Login berhasil! Mengalihkan...', 'success');
+                        
+                        // Redirect setelah delay
+                        setTimeout(() => {
+                            window.location.href = '/admin.html';
+                        }, 500);
+                    } else {
+                        throw new Error(result.message || 'Login gagal');
+                    }
+                    
+                } catch (error) {
+                    console.error('Login error:', error);
+                    showAlert(error.message || 'Terjadi kesalahan. Silakan coba lagi.');
+                    
+                    // Reset button
+                    loginBtn.disabled = false;
+                    btnText.textContent = 'Masuk';
+                    btnIcon.classList.remove('hidden');
+                    btnLoading.classList.add('hidden');
+                    loginBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+                    
+                    // Shake effect
+                    form.classList.add('shake');
+                    setTimeout(() => form.classList.remove('shake'), 500);
+                }
+            });
+        });
     </script>
 </body>
 </html>

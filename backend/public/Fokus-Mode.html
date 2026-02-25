@@ -4,12 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fokus Mode - Masjid Al-Ikhlas</title>
+    <title>Mode Fokus - Masjid Al-Ikhlas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@300;400;500;600&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -19,9 +18,14 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%);
-            min-height: 100vh;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            height: 100vh;
+            margin: 0;
             overflow: hidden;
+            /* Flexbox untuk memusatkan konten di seluruh halaman */
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         /* Islamic Geometric Pattern */
@@ -54,7 +58,6 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 2rem;
         }
 
         /* Main Card */
@@ -63,15 +66,15 @@
             backdrop-filter: blur(24px);
             border: 1px solid rgba(251, 191, 36, 0.2);
             border-radius: 40px;
-            padding: 5rem 8rem;
+            padding: 5rem 6rem;
             text-align: center;
             box-shadow:
                 0 32px 64px -12px rgba(0, 0, 0, 0.6),
                 inset 0 1px 0 rgba(255, 255, 255, 0.1),
                 0 0 120px rgba(251, 191, 36, 0.08);
             position: relative;
-            max-width: 1000px;
-            width: 100%;
+            max-width: 1100px;
+            width: 90%;
             animation: enter 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
 
@@ -130,13 +133,19 @@
         .clock-badge {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 0.75rem;
             background: rgba(15, 23, 42, 0.8);
             border: 1px solid rgba(251, 191, 36, 0.3);
-            padding: 1rem 2.5rem;
+            padding: 1rem 2rem;
+            /* DIUBAH: dari 1rem 2.5rem menjadi 1rem 2rem */
             border-radius: 100px;
-            margin-bottom: 3rem;
+            margin-bottom: 2rem;
+            /* DIUBAH: dari 3rem menjadi 2rem */
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .clock-icon {
@@ -154,38 +163,88 @@
 
         /* Typography */
         .label-text {
-            font-family: 'Amiri', serif;
+            font-family: 'Inter', sans-serif;
             color: #94a3b8;
-            font-size: 1.75rem;
+            font-size: 1.25rem;
             font-weight: 400;
             margin-bottom: 1rem;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            text-align: center;
         }
 
         .prayer-title {
             font-family: 'Amiri', serif;
             color: #fbbf24;
-            font-size: 7rem;
+            font-size: 3rem;
             font-weight: 700;
             line-height: 1.1;
             text-shadow: 0 4px 40px rgba(251, 191, 36, 0.25);
             margin-bottom: 0.5rem;
+            text-align: center;
         }
 
         .prayer-name {
             font-family: 'Amiri', serif;
             color: #fde68a;
-            font-size: 3rem;
+            font-size: 7rem;
             font-weight: 400;
             margin-bottom: 2rem;
+            text-align: center;
         }
 
         .subtitle {
-            color: #64748b;
-            font-size: 1.25rem;
+            color: #94a3b8;
+            font-size: 1.2rem;
             font-weight: 300;
             font-style: italic;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.02em;
+            text-align: center;
+        }
+
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-content {
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(251, 191, 36, 0.1);
+            border-top-color: #fbbf24;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        .loading-text {
+            color: #fbbf24;
+            font-size: 1.2rem;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.1em;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Countdown Timer - DIHILANGKAN */
+        .countdown-container {
+            display: none;
         }
 
         /* Animations */
@@ -216,14 +275,41 @@
             animation: breathe 6s ease-in-out infinite;
         }
 
+        /* Masjid Silhouette */
+        .masjid-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 120px;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Fade In Animation */
+        .fade-in {
+            animation: fadeIn 1.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .prayer-title {
-                font-size: 4rem;
+                font-size: 2rem;
             }
 
             .prayer-name {
-                font-size: 2rem;
+                font-size: 4rem;
             }
 
             .focus-card {
@@ -238,31 +324,6 @@
                 font-size: 1.25rem;
             }
         }
-
-        /* Masjid Silhouette */
-        .masjid-footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 120px;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
-            pointer-events: none;
-            z-index: 5;
-        }
-
-        .silhouette {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            max-width: 600px;
-            height: 80px;
-            opacity: 0.4;
-            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 80'%3E%3Cpath fill='%23000' d='M0,80 L0,60 Q20,60 20,45 Q20,30 35,30 Q50,30 50,45 Q50,60 70,60 L70,40 Q85,40 85,25 Q85,10 100,10 Q115,10 115,25 Q115,40 130,40 L130,60 L150,60 L150,35 Q165,35 165,20 Q165,5 180,5 Q195,5 195,20 Q195,35 210,35 L210,60 L230,60 L230,40 Q245,40 245,25 Q245,10 260,10 Q275,10 275,25 Q275,40 290,40 L290,60 L310,60 L310,35 Q325,35 325,20 Q325,5 340,5 Q355,5 355,20 Q355,35 370,35 L370,60 L390,60 L390,40 Q405,40 405,25 Q405,10 420,10 Q435,10 435,25 Q435,40 450,40 L450,60 L470,60 L470,45 Q485,45 485,35 Q485,25 500,25 Q515,25 515,35 Q515,45 530,45 L530,60 L550,60 L550,50 Q565,50 565,40 Q565,30 580,30 Q595,30 595,40 L595,60 L600,60 L600,80 Z'/%3E%3C/svg%3E") bottom center no-repeat;
-            background-size: contain;
-        }
     </style>
 </head>
 
@@ -271,6 +332,15 @@
     <div class="pattern-bg"></div>
     <div class="ambient-glow"></div>
 
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">MEMUAT FOKUS MODE...</div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
     <div class="container">
         <!-- Main Card -->
         <div class="focus-card">
@@ -280,39 +350,177 @@
             <div class="frame-corner frame-bl"></div>
             <div class="frame-corner frame-br"></div>
 
-            <!-- Glow -->
+            <!-- Glow Effect -->
             <div class="soft-glow"></div>
 
-            <!-- Clock Badge (Tengah Atas) -->
+            <!-- Clock Badge -->
             <div class="clock-badge">
-                <i class="far fa-clock clock-icon"></i>
-                <span class="clock-text" id="clock">--:--:--</span>
+                <i class="fas fa-clock clock-icon"></i>
+                <span class="clock-text" id="clock">00:00:00</span>
             </div>
 
             <!-- Content -->
-            <div class="label-text">Sedang Berlangsungnya</div>
-            <h1 class="prayer-name">Shalat</h1>
-            <div class="prayer-title" id="active-prayer">Memuat...</div>
-
-            <p class="subtitle">Mohon menjaga ketenangan dan kekhusyukan</p>
+            <div class="label-text">Sedang Berlangsung</div>
+            <div class="prayer-title">SHALAT</div>
+            <div class="prayer-name" id="prayer-name">ISYA</div>
+            <div class="subtitle">"Harap menonaktifkan suara handphone Anda"</div>
         </div>
+
+        <!-- Countdown Timer - DIHILANGKAN -->
     </div>
 
-    <!-- Footer Silhouette -->
+    <!-- Masjid Footer -->
     <div class="masjid-footer">
         <div class="silhouette"></div>
     </div>
 
-    <script>
-        let autoRedirect;
-        let FOKUS_DURATION = 10 * 60 * 1000; // 10 menit default
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-        // Fungsi Jam Realtime - UPDATE SETIAP DETIK
+    <script>
+        // ==================== FUNGSI UNTUK MENGAMBIL DURASI FOKUS DARI DATABASE ====================
+        async function getFokusDurationFromServer(prayerName) {
+            try {
+                console.log(`🔍 Mengambil durasi fokus untuk: ${prayerName} dari database...`);
+
+                // Mapping nama shalat ke format yang benar di database admin.js
+                const prayerMapping = {
+                    'subuh': 'subuh',
+                    'shubuh': 'subuh',
+                    'dzuhur': 'dzuhur',
+                    'ashar': 'ashar',
+                    'maghrib': 'maghrib',
+                    'isya': 'isya',
+                    'jumat': 'jumat',
+                    'tarawih': 'tarawih'
+                };
+
+                const mappedPrayer = prayerMapping[prayerName] || prayerName;
+
+                // Panggil API settings
+                const response = await fetch('/api/settings');
+                if (!response.ok) {
+                    throw new Error('Gagal mengambil settings');
+                }
+
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    // Cari setting dengan key yang sesuai
+                    const settingKey = `fokus_duration_${mappedPrayer}`;
+                    const targetSetting = result.data.find(s => s.setting_key === settingKey);
+
+                    if (targetSetting && targetSetting.setting_value) {
+                        const duration = parseInt(targetSetting.setting_value);
+                        console.log(`✅ Durasi fokus dari database: ${duration} menit untuk ${prayerName} (key: ${settingKey})`);
+                        return duration;
+                    } else {
+                        console.log(`⚠️ Tidak ada setting untuk ${settingKey}, mencari key alternatif...`);
+
+                        // Coba cari dengan key alternatif
+                        const altKey = `fokus_${mappedPrayer}`;
+                        const altSetting = result.data.find(s => s.setting_key === altKey);
+
+                        if (altSetting && altSetting.setting_value) {
+                            const duration = parseInt(altSetting.setting_value);
+                            console.log(`✅ Durasi fokus dari database (key alternatif): ${duration} menit`);
+                            return duration;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error mengambil durasi fokus dari server:', error);
+            }
+
+            // Jika gagal, gunakan default berdasarkan jenis shalat
+            const defaultDurations = {
+                'subuh': 10,
+                'shubuh': 10,
+                'dzuhur': 10,
+                'ashar': 10,
+                'maghrib': 10,
+                'isya': 10,
+                'jumat': 30,
+                'tarawih': 45
+            };
+
+            const defaultDuration = defaultDurations[prayerName] || 10;
+            console.log(`⚠️ Menggunakan default duration: ${defaultDuration} menit untuk ${prayerName}`);
+            return defaultDuration;
+        }
+
+        // ==================== FUNGSI UNTUK MENGAMBIL NAMA SHALAT ====================
+        function getPrayerName() {
+            // PRIORITAS 1: Dari URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const prayerFromUrl = urlParams.get('prayer');
+
+            if (prayerFromUrl) {
+                console.log(`📌 Nama shalat dari URL: ${prayerFromUrl}`);
+                return prayerFromUrl.toLowerCase();
+            }
+
+            // PRIORITAS 2: Dari localStorage (adzan_prayer_name)
+            const prayerFromStorage = localStorage.getItem('adzan_prayer_name');
+            if (prayerFromStorage) {
+                console.log(`📌 Nama shalat dari localStorage (adzan_prayer_name): ${prayerFromStorage}`);
+                return prayerFromStorage.toLowerCase();
+            }
+
+            // PRIORITAS 3: Dari localStorage (currentPrayer)
+            const currentPrayer = localStorage.getItem('currentPrayer');
+            if (currentPrayer) {
+                console.log(`📌 Nama shalat dari localStorage (currentPrayer): ${currentPrayer}`);
+                return currentPrayer.toLowerCase();
+            }
+
+            // FALLBACK
+            console.log('⚠️ Tidak ada data shalat, menggunakan default: dzuhur');
+            return 'dzuhur';
+        }
+
+        // ==================== FUNGSI UNTUK MENGECEK RAMADHAN ====================
+        async function checkRamadhanMode() {
+            try {
+                const response = await fetch('/api/ramadhan-mode');
+                const data = await response.json();
+                return data.isRamadhan || false;
+            } catch (error) {
+                console.error('Error cek Ramadhan mode:', error);
+
+                // Fallback: cek dari localStorage
+                const hijriDate = localStorage.getItem('hijri_date_cache') || '';
+                return hijriDate.toLowerCase().includes('ramadhan');
+            }
+        }
+
+        // ==================== FUNGSI UPDATE UI ====================
+        function updateUIPrayerName(prayerName) {
+            const nameEl = document.getElementById('prayer-name');
+
+            const names = {
+                'subuh': 'SUBUH',
+                'shubuh': 'SUBUH',
+                'dzuhur': 'DZUHUR',
+                'ashar': 'ASHAR',
+                'maghrib': 'MAGHRIB',
+                'isya': 'ISYA',
+                'jumat': 'JUMAT',
+                'tarawih': 'TARAWIH'
+            };
+
+            const displayName = names[prayerName] || prayerName.toUpperCase();
+            nameEl.textContent = displayName;
+
+            console.log(`🎯 Menampilkan: ${displayName}`);
+        }
+
+        // ==================== FUNGSI JAM ====================
         function startClock() {
             const clockEl = document.getElementById('clock');
-            if (!clockEl) return;
 
-            function update() {
+            const clockInterval = setInterval(() => {
+                // Jam Digital Realtime
                 const now = new Date();
                 clockEl.textContent = now.toLocaleTimeString('id-ID', {
                     hour: '2-digit',
@@ -320,118 +528,102 @@
                     second: '2-digit',
                     hour12: false
                 });
-            }
-            update();
-            setInterval(update, 1000);
+            }, 1000);
+
+            return clockInterval;
         }
 
-        // Fungsi Redirect (Bisa ke Display Utama atau ke Shalat Lanjutan)
-        function redirectToDisplay(nextPrayer = null) {
-            // Clear data fokus dari memori
+        // ==================== FUNGSI REDIRECT ====================
+        function redirectToNext(currentPrayer, isRamadhan) {
+            // Bersihkan flag aktif
             localStorage.removeItem('fokusActive');
             localStorage.removeItem('fokusPrayer');
             localStorage.removeItem('fokusStart');
             localStorage.removeItem('fokusDuration');
-            localStorage.removeItem('currentPrayer');
 
-            if (nextPrayer) {
-                // Jika ada shalat lanjutan (Contoh: Tarawih), lempar kembali ke Fokus Mode
-                window.location.href = `/Fokus-Mode.html?prayer=${nextPrayer}`;
+            // CEK JIKA RAMADHAN: ISYA -> TARAWIH
+            if (currentPrayer === 'isya' && isRamadhan) {
+                console.log("🌙 Ramadhan: Transisi dari Isya ke Tarawih...");
+                window.location.href = `fokus-mode.html?prayer=tarawih`;
             } else {
-                // Jika benar-benar selesai, tandai shalat terakhir dan kembali ke Beranda/Display
-                const currentPrayer = document.getElementById('active-prayer').textContent;
-                localStorage.setItem('lastPrayerCompleted', currentPrayer);
-                localStorage.setItem('lastPrayerTime', Date.now());
-
-                // Redirect ke halaman index/display
-                window.location.href = '/';
-                // Catatan: Jika Anda menggunakan display.html, ubah '/' menjadi '/display.html?completed=1'
+                console.log("⏳ Waktu habis, kembali ke Display Utama...");
+                window.location.href = 'index.html';
             }
         }
 
-        // Inisialisasi Utama saat halaman dimuat
+        // ==================== INISIALISASI UTAMA ====================
         document.addEventListener('DOMContentLoaded', async () => {
-            // 1. Ambil nama shalat saat ini dari URL atau localStorage
-            const urlParams = new URLSearchParams(window.location.search);
-            let rawPrayer = urlParams.get('prayer') || localStorage.getItem('currentPrayer') || 'dzuhur';
-            let currentPrayer = rawPrayer.toLowerCase();
-
-            // ==========================================
-            // LOGIKA KHUSUS 1: DETEKSI SHALAT JUMAT
-            // ==========================================
-            // Jika dari sistem terekam Dzuhur tapi hari ini adalah Jumat (getDay() === 5)
-            if (currentPrayer === 'dzuhur' && new Date().getDay() === 5) {
-                currentPrayer = 'jumat';
-            }
-
-            // Tampilkan nama shalat ke layar (Huruf kapital di awal)
-            const displayPrayerName = currentPrayer.charAt(0).toUpperCase() + currentPrayer.slice(1);
-            const activePrayerEl = document.getElementById('active-prayer');
-            if (activePrayerEl) activePrayerEl.textContent = displayPrayerName;
-
-            // Jalankan jam realtime
-            startClock();
-
-            // 2. Ambil Durasi Fokus Mode dari API / Database
-            let durationMinutes = parseInt(urlParams.get('duration')) || parseInt(localStorage.getItem('fokusDuration')) || 10;
-
             try {
-                const response = await fetch('/api/settings');
-                const result = await response.json();
+                // 1. Ambil nama shalat
+                const prayerName = getPrayerName();
 
-                if (result.success && result.data) {
-                    const settingKey = `fokus_duration_${currentPrayer}`;
-                    const targetSetting = result.data.find(s => s.setting_key === settingKey);
+                // 2. Update UI dengan nama shalat
+                updateUIPrayerName(prayerName);
 
-                    if (targetSetting && targetSetting.setting_value) {
-                        durationMinutes = parseInt(targetSetting.setting_value);
+                // 3. Ambil durasi fokus dari server
+                let durationMinutes = await getFokusDurationFromServer(prayerName);
+
+                // 4. Simpan ke localStorage untuk referensi
+                localStorage.setItem('fokus_duration', durationMinutes.toString());
+                localStorage.setItem('fokusPrayer', prayerName);
+                localStorage.setItem('fokusActive', 'true');
+                localStorage.setItem('fokusStart', Date.now().toString());
+
+                console.log(`✅ Mode Fokus: ${prayerName} selama ${durationMinutes} menit`);
+
+                // 5. Hilangkan loading screen
+                setTimeout(() => {
+                    document.getElementById('loading-screen').style.opacity = '0';
+                    setTimeout(() => {
+                        document.getElementById('loading-screen').style.display = 'none';
+                    }, 500);
+                }, 1000);
+
+                // 6. Start clock
+                const clockInterval = startClock();
+
+                // 7. Cek Ramadhan mode untuk redirect
+                const isRamadhan = await checkRamadhanMode();
+
+                // 8. Set timer untuk redirect
+                const durationInMs = durationMinutes * 60 * 1000;
+                const redirectTimer = setTimeout(() => {
+                    clearInterval(clockInterval);
+                    redirectToNext(prayerName, isRamadhan);
+                }, durationInMs);
+
+                // 9. Shortcut Keluar (Esc)
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        clearTimeout(redirectTimer);
+                        clearInterval(clockInterval);
+                        if (confirm("Keluar dari Mode Fokus?")) {
+                            window.location.href = 'index.html';
+                        }
                     }
-                }
+                });
+
+                // 10. Cleanup saat halaman ditutup
+                window.addEventListener('beforeunload', () => {
+                    clearTimeout(redirectTimer);
+                    clearInterval(clockInterval);
+                });
+
             } catch (error) {
-                console.error('Gagal mengambil pengaturan durasi fokus dari server:', error);
+                console.error('❌ Error inisialisasi:', error);
+
+                // Fallback jika error
+                document.getElementById('loading-screen').style.display = 'none';
+                document.getElementById('prayer-name').textContent = 'DZUHUR';
+
+                // Mulai clock dengan default
+                const clockInterval = startClock();
+
+                setTimeout(() => {
+                    clearInterval(clockInterval);
+                    window.location.href = 'index.html';
+                }, 10 * 60 * 1000);
             }
-
-            console.log(`⏱️ Mode Fokus aktif untuk ${displayPrayerName} selama ${durationMinutes} menit.`);
-            FOKUS_DURATION = durationMinutes * 60 * 1000; // Konversi ke milidetik
-
-            // Simpan state fokus ke localStorage agar sistem tahu layar sedang dikunci
-            localStorage.setItem('fokusActive', 'true');
-            localStorage.setItem('fokusPrayer', currentPrayer);
-            localStorage.setItem('fokusStart', Date.now());
-            localStorage.setItem('fokusDuration', durationMinutes);
-
-            // ==========================================
-            // LOGIKA KHUSUS 2: CEK BULAN RAMADHAN
-            // ==========================================
-            const hijriDate = localStorage.getItem('hijri_date_cache') || '';
-            const isRamadhan = hijriDate.toLowerCase().includes('ramadhan');
-
-            // 3. Set timer otomatis untuk mengakhiri Mode Fokus
-            autoRedirect = setTimeout(() => {
-                if (currentPrayer === 'isya' && isRamadhan) {
-                    console.log("🌙 Waktu Isya selesai di Bulan Ramadhan! Melanjutkan langsung ke Tarawih...");
-                    // Panggil fungsi redirect dengan parameter tarawih
-                    redirectToDisplay('tarawih');
-                } else {
-                    console.log("⏳ Waktu fokus habis, kembali ke display utama...");
-                    redirectToDisplay();
-                }
-            }, FOKUS_DURATION);
-
-            // --- Event Listeners Pendukung ---
-
-            // Bersihkan timer jika halaman di-refresh/ditutup tiba-tiba
-            window.addEventListener('beforeunload', () => {
-                clearTimeout(autoRedirect);
-            });
-
-            // Tombol Darurat (Escape) untuk membatalkan mode fokus manual
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    clearTimeout(autoRedirect);
-                    redirectToDisplay();
-                }
-            });
         });
     </script>
 </body>

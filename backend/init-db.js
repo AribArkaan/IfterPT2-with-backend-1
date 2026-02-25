@@ -1,11 +1,12 @@
 const mysql = require('mysql2');
+const bcrypt = require('bcryptjs');
 
 // Database Connection
 const connection = mysql.createConnection({
   host: 'localhost',
   user: 'root',
-  password: '', 
-  multipleStatements: true
+  password: '',
+  multipleStatements: true // Penting untuk menjalankan banyak query sekaligus
 });
 
 console.log('🔧 Starting database initialization...');
@@ -132,6 +133,19 @@ function createTables() {
       balance DECIMAL(15,2) DEFAULT 0,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS users (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      username VARCHAR(50) UNIQUE NOT NULL,
+      email VARCHAR(100) UNIQUE,
+      password_hash VARCHAR(255) NOT NULL,
+      full_name VARCHAR(100),
+      role ENUM('admin', 'operator') DEFAULT 'operator',
+      is_active BOOLEAN DEFAULT TRUE,
+      last_login TIMESTAMP NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;    
   `;
 
   connection.query(createTablesSQL, (err) => {
@@ -175,8 +189,37 @@ function insertDefaultData() {
       ['iqomah_duration', '10']
     ];
 
+    const defaultUsers = [
+      ['admin', 'admin@masjid.local', 'admin123', 'Administrator', 'admin']
+    ];
+
+    const insertUserSQL = 'INSERT IGNORE INTO users (username, email, password_hash, full_name, role) VALUES ?';
+
+    const bcrypt = require('bcryptjs');
+    const saltRounds = 10;
+
+    const userPromises = defaultUsers.map(async ([username, email, password, full_name, role]) => {
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      return [username, email, hashedPassword, full_name, role];
+    });
+
+    Promise.all(userPromises).then((userValues) => {
+      connection.query(insertUserSQL, [userValues], (err) => {
+        if (err) {
+          console.error('❌ Error inserting admin user:', err.message);
+          // Lanjutkan meskipun error (mungkin user sudah ada)
+        } else {
+          console.log('✅ Admin user created (username: admin, password: admin123)');
+        }
+        checkCompletion();
+      });
+    }).catch(err => {
+      console.error('❌ Error hashing password:', err);
+      checkCompletion();
+    });
+
     let completedQueries = 0;
-    const totalQueries = 7; // Number of insert operations
+    const totalQueries = 8; // Number of insert operations
 
     function checkCompletion() {
       completedQueries++;
