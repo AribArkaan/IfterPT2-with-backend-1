@@ -8,7 +8,9 @@ const WebSocket = require('ws');
 
 // ==================== IMPORTS ====================
 const { pool, dbConfig } = require('./config/database');
+const sessionConfig = require('./config/session');
 const errorHandler = require('./middleware/errorHandler');
+const { requireLogin, isLoggedIn } = require('./middleware/auth');
 const { subscribeClient, broadcast, getConnectedClients } = require('./utils/broadcast');
 const { uploadDir } = require('./utils/fileUpload');
 const { startPeriodicCleanup } = require('./utils/eventCleanup');
@@ -23,6 +25,7 @@ const runningTextRouter = require('./routes/runningText');
 const iqomahRunningTextRouter = require('./routes/iqomahRunningText');
 const eventsRouter = require('./routes/events');
 const financesRouter = require('./routes/finances');
+const authRouter = require('./routes/auth');
 
 // ==================== APP SETUP ====================
 const app = express();
@@ -33,7 +36,8 @@ const wss = new WebSocket.Server({ server });
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'));
+app.use(sessionConfig); // Session middleware - MUST be before routes
+// NOTE: NOT serving static 'public' folder here - will serve after routes
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 // ==================== WEBSOCKET SETUP ====================
@@ -42,6 +46,7 @@ wss.on('connection', (ws) => {
 });
 
 // ==================== API ROUTES ====================
+app.use('/api/auth', authRouter); // Add auth routes
 app.use('/api/settings', settingsRouter);
 app.use('/api/prayer-times', prayerTimesRouter);
 app.use('/api/content', contentRouter);
@@ -52,7 +57,7 @@ app.use('/api/iqomah-running-text', iqomahRunningTextRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/finances', financesRouter);
 
-// Health check & WebSocket info
+// ==================== HEALTH CHECK ====================
 app.get('/api/health', (req, res) => {
   pool.query('SELECT 1', (err) => {
     if (err) {
@@ -72,13 +77,37 @@ app.get('/api/health', (req, res) => {
 });
 
 // ==================== STATIC PAGES ====================
-app.get('/admin', (req, res) => {
+// Login page - accessible to everyone
+app.get('/login', (req, res) => {
+  if (req.session && req.session.userId) {
+    // If already logged in, redirect to admin
+    return res.redirect('/admin');
+  }
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Admin page - requires login
+app.get('/admin', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
+// Landing/Display page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+// ==================== STATIC FILES (AFTER ROUTES) ====================
+// Protect admin files before serving static files
+app.use((req, res, next) => {
+  // Protect /admin.html and admin.* requests
+  if (req.path.toLowerCase().includes('admin')) {
+    return requireLogin(req, res, next);
+  }
+  next();
+});
+
+// Now serve static files, but other routes take precedence
+app.use(express.static('public'));
 
 // ==================== 404 & ERROR HANDLERS ====================
 app.use((req, res) => {
