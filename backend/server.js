@@ -77,6 +77,15 @@ app.get('/api/health', (req, res) => {
 });
 
 // ==================== STATIC PAGES ====================
+// Register page - accessible to everyone
+app.get('/register', (req, res) => {
+  if (req.session && req.session.userId) {
+    // If already logged in, redirect to admin
+    return res.redirect('/admin');
+  }
+  res.sendFile(path.join(__dirname, 'public', 'register.html'));
+});
+
 // Login page - accessible to everyone
 app.get('/login', (req, res) => {
   if (req.session && req.session.userId) {
