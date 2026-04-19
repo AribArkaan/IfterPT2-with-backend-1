@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "masjid-al-ikhlas-sync",
+  "private_key_id": "100beb194a63771eb280095a3be1e680370e56c7",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCxMXpfd84yczrR\nbn28m4b9wsYQCT0c7ZG6Qm3RJzGKbXQ9Y30+46RNV6/r6O6ACfHnkLBx2OLh6p2a\no2HGATI6xmr/iVU+UyM5U3XBxwRMSGEErE+Gqh//K6aE+wVnuJDjVGCobKT1fC5O\nf3WzEcQU5vPxw9R6czLL9yhb3S/51q1SJ2Xq5oYYHL5BTscuevYQCMGEQuKm2o3p\n3VsJNGRCElqvZf1hs5pyBs8WvgkOEDTCilFFEqjN6DeKaBRdCnleUrJgdzE+Bhdf\nuXqKmzm1kCG520vsR7onu4hg7fzGE667FhtVyQ16QmbRYViUWvQ/RnYsOPSwGJUT\nLG+Z6/b/AgMBAAECggEALd39a94C2atbU+AymxJ1WJXFGFyT3bufZ+QPMj9fgxI/\nLy7kOlXJ751dtAb5SdqJLGSXT/kRDeLiBif5xLwFiRJYmyotDzONICc7CbyfH7Hy\nrzd9ZIIAQ1jEw5KI/SbZFod+d8qbztHk2LwEtyRHqhN4nSIQi9vrD8I8R79TTmv1\nwyPNNdAGdSwYa5670zIAVFHsp1PEJ+Itx/IWmxTfK9ABODO1iFvtTDYiURL2uDzD\nGYfGE3n10S+chPY/WUyOcNkcpL+lXN4tm2ik+9A7Vb5zzIhubltACPJJa7vzlRsC\n+X2eGflGnUC+iWELL/2fcNtrSGKj9+NjaLiEHLEj3QKBgQDhd3yNjJ2vP4wKM7eE\nG8/oueVX5sI76cuZhi9mio1yH7iG3VHvuoUQyg657kEGGGfx3zWjebL9LtHJ4qH0\nQP6Q8pv1pWeW5/5pftZi9jSlHSNiFuqKIkBnyUDaTXs645gQu3S1nGsnKrgggAKp\nCulmkv6Ai/gqQE0vxMoBAGhYGwKBgQDJMHCbNoaGQrW53+zZAQe6oQkOxIMkOE2+\nOIIOdm+PfGJ9IY17Ui+jDwHFLR3oZ7XWZjBDqQrrLBPj21swzHvxRc5cfJUko4aa\nuj6WILzRyX6GO6qQmQ7HLD8FuGcUiJp5yB6IVwZhxZgOKjOhyBJCTAtqOXOKsdbr\nlf1A/GmS7QKBgQC9AMb+ebPtpp2kJ7pdGlttQfhJeX21b8VnCx9NHDR6SLENDRaU\nmYzWiCtUHa+QhoEMNwrl4Sz0JH1keYE+GgXMSDQI9gEidZPFp7fb+XwkNYrlvUQb\nS58l4YVl+rGkqgldbWbmnxsMGDmFtQmF30nM3MhPxgXglUqfEp4rvMW7pQKBgAv0\nOtyeEsQrdozCx1nle8YVB2q/NmOSjNv+k4u0cdB+vYNd2QA40+fGXn6OvbYvY1iH\n3dpHUwTCK7RgNjziCYM+eJJ6PIpexQKwikN1UoLMjB4BsZLB5WTkNiJq4IUR0Mvn\nnhjPwutQSEafL04vixYxWoRHQZw+EN0SnmecF9HJAoGAfW+VHvrleSro/Ws25Tdr\nXoLiCP+7Ma8Z5Qk4Z/et9qhODK3eVWZX+JPBFxYTMknLL/0VbpRIa0nYc/SDwJtQ\nZhL+JzKYZIHJyCGIfnsKwZyh+PnfC2DqY+xNHAsJn19xwm9CbkKbmzPei+U5hoZI\n8d0JPJhnjdKFGmXF4/hymdY=\n-----END PRIVATE KEY-----\n",
+  "client_email": "masjid-sync-service@masjid-al-ikhlas-sync.iam.gserviceaccount.com",
+  "client_id": "118073454956244605834",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/masjid-sync-service%40masjid-al-ikhlas-sync.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

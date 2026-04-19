@@ -283,12 +283,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (STATE.ramadhanMode) {
       await loadImsakTime();
-      addImsakToSidebar();
-
-      // Auto-refresh setiap jam (untuk jaga-jaga jika Subuh berubah)
-      setTimeout(() => {
-        updateImsakDisplay();
-      }, 3600000); // 1 jam
+      addImsakToSidebar();  
     } else {
       removeImsakFromSidebar();
     }
@@ -2354,21 +2349,7 @@ function updateFinanceDisplay(summary, transactions) {
     }
 
     STATE.clockInterval = setInterval(updateLiveClock, 1000);
-  }
-
-  // Auto-refresh data
-  function startAutoRefresh() {
-    // Refresh running text setiap 30 detik
-    setInterval(() => {
-      loadRunningText();
-    }, 30000);
-
-    // Refresh data lain setiap 5 menit
-    setInterval(() => {
-      loadPrayerTimes();
-      loadFinanceData();
-    }, 300000);
-  }
+  }  
 
   async function initContentRotator() {
     // Clear existing rotation interval
@@ -2507,19 +2488,7 @@ function updateFinanceDisplay(summary, transactions) {
       await Promise.allSettled(loadPromises);
 
       // Initialize WebSocket
-      initWebSocket();
-
-      // Auto-refresh running text
-      setInterval(() => {
-        console.log('🔄 Auto-refresh running text...');
-        loadRunningText();
-      }, 30000);
-
-      // Auto-refresh finance data setiap 2 menit
-      setInterval(() => {
-        console.log('🔄 Auto-refresh finance data...');
-        loadFinanceData();
-      }, 120000);
+      initWebSocket();     
 
       console.log('✅ System initialized successfully');
 

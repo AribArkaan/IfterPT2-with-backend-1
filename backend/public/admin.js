@@ -261,108 +261,46 @@ function setDefaultDates() {
 
 // ==================== FUNGSI API ALADHAN YANG DIPERBAIKI ====================
 async function fetchFromAPI() {
+    const today = new Date().toISOString().split('T')[0];
+    const lastUpdate = localStorage.getItem('last_api_update');
+
+    // Batasi request: Jika sudah update hari ini, jangan panggil API lagi
+    if (lastUpdate === today) {
+        console.log('✅ Jadwal shalat sudah diperbarui hari ini. Melewati request API.');
+        return;
+    }
+
     try {
-        showToast('🔄 Mengambil data dari API Aladhan...', 'info');
+        console.log('🔄 Menarik data otomatis dari API Aladhan...');
+        
+        // Opsi API (Calendar/Timings) tetap menggunakan koordinat CONFIG [cite: 1, 54, 55]
+        const calendarApiUrl = `https://api.aladhan.com/v1/calendar/${new Date().getFullYear()}/${new Date().getMonth() + 1}?latitude=${CONFIG.LOCATION.LATITUDE}&longitude=${CONFIG.LOCATION.LONGITUDE}&method=${CONFIG.CALCULATION.METHOD}`;
+        
+        const response = await fetch(calendarApiUrl);
+        if (!response.ok) throw new Error('Gagal menghubungi API');
+        
+        const data = await response.json();
+        const day = new Date().getDate();
+        const apiData = data.data[day - 1];
 
-        // Tampilkan loading state
-        const resultDiv = document.getElementById('api-result');
-        resultDiv.innerHTML = `
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div class="flex items-center">
-                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
-                        <div>
-                            <h4 class="font-semibold text-blue-800">Sedang mengambil data...</h4>
-                            <p class="text-blue-600 text-sm">Menghubungi API Aladhan</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = today.getMonth() + 1;
-        const day = today.getDate();
-
-        // Dua opsi API yang berbeda
-        // Opsi 1: Calendar API (lebih stabil untuk bulan penuh)
-        const calendarApiUrl = `https://api.aladhan.com/v1/calendar/${year}/${month}?latitude=${CONFIG.LOCATION.LATITUDE}&longitude=${CONFIG.LOCATION.LONGITUDE}&method=${CONFIG.CALCULATION.METHOD}`;
-
-        // Opsi 2: Timings by city (lebih cepat untuk hari ini)
-        const timingsApiUrl = `https://api.aladhan.com/v1/timingsByCity/${day}-${month}-${year}?city=Bandung&country=Indonesia&method=${CONFIG.CALCULATION.METHOD}&school=1`;
-
-        console.log('🌐 Calling Aladhan API...');
-
-        // Coba API calendar dulu, jika gagal coba timingsByCity
-        let apiData = null;
-
-        try {
-            // Coba dengan timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-            const response = await fetch(calendarApiUrl, {
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.code === 200 && data.data && data.data[day - 1]) {
-                    apiData = data.data[day - 1];
-                    console.log('✅ Data dari Calendar API:', apiData);
-                }
+        if (apiData) {
+            const timings = apiData.timings;
+            const formattedPrayers = formatAladhanTimings(timings); 
+            
+            if (apiData.date && apiData.date.hijri) {
+                const hijri = apiData.date.hijri;
+                localStorage.setItem('hijri_date_cache', `${hijri.day} ${hijri.month.en} ${hijri.year} H`);
             }
-        } catch (calendarError) {
-            console.log('Calendar API gagal, mencoba timingsByCity...');
 
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-                const response = await fetch(timingsApiUrl, {
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.code === 200 && data.data) {
-                        apiData = data.data;
-                        console.log('✅ Data dari Timings API:', apiData);
-                    }
-                }
-            } catch (timingsError) {
-                console.error('Kedua API gagal:', timingsError);
-                throw new Error('Gagal menghubungi API Aladhan');
-            }
+            // OTOMATIS: Simpan langsung ke database tanpa tunggu klik user
+            await saveApiTimesToDatabase(formattedPrayers);
+            
+            // Tandai bahwa hari ini sudah berhasil update
+            localStorage.setItem('last_api_update', today);
+            showToast('✅ Jadwal otomatis diperbarui dari satelit', 'success');
         }
-
-        if (!apiData) {
-            throw new Error('Data API tidak valid');
-        }
-
-        // Format data dari API
-        const timings = apiData.timings || apiData;
-        const formattedPrayers = formatAladhanTimings(timings);
-
-        // Ambil tanggal Hijriyah juga jika tersedia
-        if (apiData.date && apiData.date.hijri) {
-            const hijriDate = apiData.date.hijri;
-            const formattedHijriDate = `${hijriDate.day} ${hijriDate.month.en} ${hijriDate.year} H`;
-            console.log('📅 Tanggal Hijriyah:', formattedHijriDate);
-
-            // Simpan ke localStorage atau tampilkan
-            localStorage.setItem('hijri_date_cache', formattedHijriDate);
-        }
-
-        // Tampilkan hasil
-        displayApiResult(formattedPrayers);
-        showToast('✅ Data berhasil diambil dari API Aladhan', 'success');
-
     } catch (error) {
-        console.error('❌ Error fetching from API:', error);
-
-        // Gunakan fallback data jika API gagal
+        console.error('❌ Auto-fetch API gagal:', error);
         useFallbackData();
     }
 }
@@ -678,6 +616,29 @@ async function saveApiTimesToDatabase() {
     }
 }
 
+async function saveApiTimesToDatabase(prayersData) {
+    const dataToSave = prayersData || window.lastApiPrayers; 
+    
+    if (!dataToSave) return;
+
+    try {
+        const response = await fetch('/api/prayer-times/bulk', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prayers: dataToSave })
+        });
+
+        if (response.ok) {
+            loadPrayerTimes(); // Refresh tabel setelah simpan 
+            
+            const hijriDate = localStorage.getItem('hijri_date_cache');
+            if (hijriDate) await updateHijriDate(hijriDate); 
+        }
+    } catch (error) {
+        console.error('Error saving to DB:', error);
+    }
+}
+
 // Fungsi untuk update tanggal Hijriyah ke database
 async function updateHijriDate(hijriDate) {
     try {
@@ -834,6 +795,13 @@ async function loadPrayerTimes() {
 
         const result = await response.json();
         const prayers = result.data || [];
+
+        // CEK OTOMATISASI: Jika database kosong, tarik dari API
+        if (prayers.length === 0) {
+            console.log('⚠️ Database kosong, memulai penarikan data API...');
+            await fetchFromAPI();
+            return;
+        }
 
         const table = document.getElementById('prayer-table');
         if (!table) return;
@@ -1316,6 +1284,68 @@ async function updateDashboardFinance() {
         console.error('❌ Error updating dashboard finance:', error);
     }
 }
+
+// Tambahkan tombol di bagian toolbar finance (di admin.html)
+// <button onclick="syncToGoogleSheet()" class="bg-blue-600 text-white px-4 py-2 rounded-lg ml-2">
+//     <i class="fab fa-google mr-2"></i> Sync ke Google Sheet
+// </button>
+
+// Fungsi sync ke Google Sheet
+async function syncToGoogleSheet() {
+    if (!confirm('Yakin ingin menyinkronkan data keuangan ke Google Sheet?')) {
+        return;
+    }
+    
+    showToast('📤 Menyinkronkan data...', 'info');
+    
+    try {
+        const response = await fetch('/api/sync-to-google-sheet', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast(`✅ ${result.message}`, 'success');
+            // Buka Google Sheet di tab baru
+            if (confirm('Buka Google Sheet sekarang?')) {
+                window.open(`https://docs.google.com/spreadsheets/d/${result.sheetId}`, '_blank');
+            }
+        } else {
+            showToast('❌ Gagal sync: ' + result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Sync error:', error);
+        showToast('❌ Gagal sync ke Google Sheet', 'error');
+    }
+}
+
+// Cek status koneksi Google Sheet saat load
+async function checkGoogleSheetStatus() {
+    try {
+        const response = await fetch('/api/google-sheet-status');
+        const result = await response.json();
+        
+        const statusBadge = document.getElementById('gsheet-status');
+        if (statusBadge) {
+            if (result.connected) {
+                statusBadge.innerHTML = `<i class="fab fa-google text-green-500"></i> Terhubung ke: ${result.sheetTitle}`;
+                statusBadge.title = result.sheetUrl;
+            } else {
+                statusBadge.innerHTML = `<i class="fab fa-google text-red-500"></i> Gagal terhubung`;
+            }
+        }
+    } catch (error) {
+        console.error('Error checking Google Sheet status:', error);
+    }
+}
+
+// Panggil saat halaman finance dimuat
+// Tambahkan di fungsi loadFinanceData():
+// await checkGoogleSheetStatus();
 
 // ==================== FUNGSI UPDATE DASHBOARD ALL ====================
 async function updateDashboard(prayers, events, financeSummary) {
@@ -1996,10 +2026,10 @@ async function saveRunningText() {
         const getData = await getRes.json();
         const existingTexts = getData.data || [];
 
-        // LANGKAH 2: Filter teks yang BUKAN iqomah (hanya teks umum)
+        // Filter teks umum (exclude yang jelas-jelas iqomah)
         const umumTexts = existingTexts.filter(t => {
             const text = (t.text || '').toLowerCase();
-            const isIqomah =
+            const isIqomahKeyword =
                 text.includes('🔊') ||
                 text.includes('⭐') ||
                 text.includes('📿') ||
@@ -2008,108 +2038,74 @@ async function saveRunningText() {
                 text.includes('iqomah') ||
                 text.includes('tenang') ||
                 text.includes('matikan hp');
-            return !isIqomah;
+            return !isIqomahKeyword;
         });
 
-        // LANGKAH 3: Buat Map untuk memudahkan pencarian
-        const existingTextMap = new Map();
-        umumTexts.forEach(t => existingTextMap.set(t.text, t));
+        // Array untuk menyimpan semua operasi API
+        const operations = [];
 
-        // LANGKAH 4: Tentukan teks mana yang perlu dihapus, ditambah, atau diupdate
-        const textsToDelete = [];
-        const textsToAdd = [];
-        const textsToUpdate = [];
-
-        // Cek teks yang ada di database tapi tidak ada di textarea (harus dihapus)
-        umumTexts.forEach(existingText => {
-            if (!textLines.includes(existingText.text)) {
-                textsToDelete.push(existingText);
-            }
-        });
-
-        // Cek teks dari textarea
-        textLines.forEach((lineText, index) => {
-            const existingText = existingTextMap.get(lineText);
-
-            if (existingText) {
-                // Teks sudah ada, cek apakah perlu update font/size/speed
-                if (existingText.font_family !== font ||
-                    existingText.font_size !== parseInt(fontSize) ||
-                    existingText.speed !== parseInt(speed) ||
-                    !existingText.is_active) {
-
-                    textsToUpdate.push({
-                        id: existingText.id,
-                        text: lineText,
-                        font_family: font,
-                        font_size: parseInt(fontSize),
-                        speed: parseInt(speed),
-                        is_active: true,
-                        display_order: index
-                    });
-                }
+        // LANGKAH 2: Update SEMUA teks yang ada di DB dengan nilai baru
+        // Jika teks masih ada di textarea -> Update (dengan font/size/speed baru)
+        // Jika teks tidak ada di textarea -> Hapus
+        umumTexts.forEach((existingText) => {
+            const lineIndex = textLines.findIndex(line => line === existingText.text);
+            
+            if (lineIndex !== -1) {
+                // Teks masih ada di textarea, UPDATE dengan nilai global baru
+                operations.push(
+                    fetch(`/api/running-text/${existingText.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            text: existingText.text,
+                            font_family: font,        // Nilai baru dari form
+                            font_size: parseInt(fontSize),
+                            speed: parseInt(speed),
+                            is_active: true,
+                            display_order: lineIndex
+                        })
+                    })
+                );
             } else {
-                // Teks baru
-                textsToAdd.push({
-                    text: lineText,
-                    font_family: font,
-                    font_size: parseInt(fontSize),
-                    speed: parseInt(speed),
-                    is_active: true,
-                    display_order: index
-                });
+                // Teks tidak ada lagi di textarea, HAPUS
+                operations.push(
+                    fetch(`/api/running-text/${existingText.id}`, { 
+                        method: 'DELETE' 
+                    })
+                );
             }
         });
 
-        // LANGKAH 5: Eksekusi operasi database
-        console.log('📊 Ringkasan perubahan:', {
-            hapus: textsToDelete.length,
-            tambah: textsToAdd.length,
-            update: textsToUpdate.length
+        // LANGKAH 3: Tambah teks baru yang belum ada di DB
+        const existingTextsContent = umumTexts.map(t => t.text);
+        
+        textLines.forEach((lineText, index) => {
+            if (!existingTextsContent.includes(lineText)) {
+                // Teks baru, TAMBAH dengan nilai global
+                operations.push(
+                    fetch('/api/running-text', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            text: lineText,
+                            font_family: font,
+                            font_size: parseInt(fontSize),
+                            speed: parseInt(speed),
+                            is_active: true,
+                            display_order: index
+                        })
+                    })
+                );
+            }
         });
-
-        // Hapus teks yang tidak ada di textarea
-        const deletePromises = textsToDelete.map(text =>
-            fetch(`/api/running-text/${text.id}`, { method: 'DELETE' })
-        );
-
-        // Update teks yang perlu diubah
-        const updatePromises = textsToUpdate.map(text =>
-            fetch(`/api/running-text/${text.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(text)
-            })
-        );
-
-        // Tambah teks baru
-        const addPromises = textsToAdd.map(text =>
-            fetch('/api/running-text', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(text)
-            })
-        );
 
         // Jalankan semua operasi secara paralel
-        await Promise.all([
-            ...deletePromises,
-            ...updatePromises,
-            ...addPromises
-        ]);
+        await Promise.all(operations);
 
-        // Set timestamp untuk mencegah notifikasi ganda (jika ada di kode lain)
-        if (typeof window._lastUpdateTimestamp !== 'undefined') {
-            window._lastUpdateTimestamp = Date.now();
-        }
+        // Set timestamp untuk mencegah notifikasi ganda
+        window._lastUpdateTimestamp = Date.now();
 
-        // Tampilkan pesan sukses dengan ringkasan
-        const changes = [];
-        if (textsToAdd.length) changes.push(`tambah ${textsToAdd.length}`);
-        if (textsToUpdate.length) changes.push(`update ${textsToUpdate.length}`);
-        if (textsToDelete.length) changes.push(`hapus ${textsToDelete.length}`);
-
-        showToast(`✅ Running Text berhasil disimpan! (${changes.join(', ')})`, 'success');
+        showToast(`✅ Running Text berhasil disimpan! Semua teks menggunakan font: ${font}, size: ${fontSize}px, speed: ${speed}`, 'success');
 
         // Reload data untuk memastikan tampilan sesuai
         await loadRunningText();
@@ -4381,6 +4377,7 @@ async function loadFinanceData() {
         // 0. LOAD FINANCE DISPLAY SETTING (TAMBAHAN)
         // ================================================
         await loadFinanceDisplaySetting();
+        await checkGoogleSheetStatus();
 
         // ================================================
         // 1. LOAD FINANCE SUMMARY (SALDO, PEMASUKAN, PENGELUARAN)

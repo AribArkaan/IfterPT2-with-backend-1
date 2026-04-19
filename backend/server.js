@@ -1282,6 +1282,215 @@ function checkIfRamadhan() {
     return false;
 }
 
+// Helper functions untuk auto-update jadwal shalat
+// Helper functions untuk auto-update jadwal shalat
+async function getLastUpdateDate() {
+    return new Promise((resolve, reject) => {
+        pool.query(
+            'SELECT setting_value FROM settings WHERE setting_key = "last_prayer_update"',
+            (err, results) => {
+                if (err) return reject(err);
+                if (results.length === 0) return resolve(null);
+                resolve(results[0].setting_value);
+            }
+        );
+    });
+}
+
+async function saveLastUpdateDate(date) {
+    return new Promise((resolve, reject) => {
+        pool.query(
+            `INSERT INTO settings (setting_key, setting_value) 
+             VALUES ('last_prayer_update', ?)
+             ON DUPLICATE KEY UPDATE setting_value = ?`,
+            [date, date],
+            (err) => {
+                if (err) return reject(err);
+                resolve();
+            }
+        );
+    });
+}
+
+async function getPrayerTimesFromDB() {
+    return new Promise((resolve, reject) => {
+        pool.query(
+            'SELECT prayer_name, time FROM prayer_times',
+            (err, results) => {
+                if (err) return reject(err);
+                resolve(results);
+            }
+        );
+    });
+}
+
+async function updatePrayerTimesInDB(prayers) {
+    return new Promise((resolve, reject) => {
+        let completed = 0;
+        let hasError = false;
+        
+        prayers.forEach((prayer) => {
+            pool.query(
+                'UPDATE prayer_times SET time = ? WHERE prayer_name = ?',
+                [prayer.time, prayer.prayer_name],
+                (err) => {
+                    if (err && !hasError) {
+                        hasError = true;
+                        return reject(err);
+                    }
+                    completed++;
+                    if (completed === prayers.length && !hasError) {
+                        resolve();
+                    }
+                }
+            );
+        });
+    });
+}
+
+async function fetchFromAladhanAPI() {
+    const latitude = -6.9419; // Bandung
+    const longitude = 107.6824;
+    const method = 11; // Kemenag RI
+    
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+    
+    const url = `https://api.aladhan.com/v1/calendar/${year}/${month}?latitude=${latitude}&longitude=${longitude}&method=${method}`;
+    
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        const day = today.getDate();
+        const timings = data.data[day - 1].timings;
+        
+        // Mapping dari nama API ke nama database
+        const prayerMapping = {
+            'Fajr': 'Subuh',
+            'Sunrise': 'Terbit',
+            'Dhuhr': 'Dzuhur',
+            'Asr': 'Ashar',
+            'Maghrib': 'Maghrib',
+            'Isha': 'Isya'
+        };
+        
+        const prayers = [];
+        for (const [apiName, dbName] of Object.entries(prayerMapping)) {
+            if (timings[apiName]) {
+                const timeStr = timings[apiName].split(' ')[0];
+                prayers.push({
+                    prayer_name: dbName,
+                    time: timeStr.substring(0, 5)
+                });
+            }
+        }
+        
+        return prayers;
+    } catch (error) {
+        console.error('❌ Gagal mengambil data dari API Aladhan:', error.message);
+        return null;
+    }
+}
+
+async function saveLastUpdateDate(date) {
+    return new Promise((resolve, reject) => {
+        pool.query(
+            `INSERT INTO settings (setting_key, setting_value) 
+             VALUES ('last_prayer_update', ?)
+             ON DUPLICATE KEY UPDATE setting_value = ?`,
+            [date, date],
+            (err) => {
+                if (err) return reject(err);
+                resolve();
+            }
+        );
+    });
+}
+
+async function getPrayerTimesFromDB() {
+    return new Promise((resolve, reject) => {
+        pool.query(
+            'SELECT prayer_name, time FROM prayer_times',
+            (err, results) => {
+                if (err) return reject(err);
+                resolve(results);
+            }
+        );
+    });
+}
+
+async function updatePrayerTimesInDB(prayers) {
+    return new Promise((resolve, reject) => {
+        let completed = 0;
+        let hasError = false;
+        
+        prayers.forEach((prayer) => {
+            pool.query(
+                'UPDATE prayer_times SET time = ? WHERE prayer_name = ?',
+                [prayer.time, prayer.prayer_name],
+                (err) => {
+                    if (err && !hasError) {
+                        hasError = true;
+                        return reject(err);
+                    }
+                    completed++;
+                    if (completed === prayers.length && !hasError) {
+                        resolve();
+                    }
+                }
+            );
+        });
+    });
+}
+
+async function fetchFromAladhanAPI() {
+    const latitude = -6.9419; // Bandung
+    const longitude = 107.6824;
+    const method = 11; // Kemenag RI
+    
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+    
+    const url = `https://api.aladhan.com/v1/calendar/${year}/${month}?latitude=${latitude}&longitude=${longitude}&method=${method}`;
+    
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        const day = today.getDate();
+        const timings = data.data[day - 1].timings;
+        
+        // Mapping dari nama API ke nama database
+        const prayerMapping = {
+            'Fajr': 'Subuh',
+            'Sunrise': 'Terbit',
+            'Dhuhr': 'Dzuhur',
+            'Asr': 'Ashar',
+            'Maghrib': 'Maghrib',
+            'Isha': 'Isya'
+        };
+        
+        const prayers = [];
+        for (const [apiName, dbName] of Object.entries(prayerMapping)) {
+            if (timings[apiName]) {
+                const timeStr = timings[apiName].split(' ')[0];
+                prayers.push({
+                    prayer_name: dbName,
+                    time: timeStr.substring(0, 5)
+                });
+            }
+        }
+        
+        return prayers;
+    } catch (error) {
+        console.error('❌ Gagal mengambil data dari API Aladhan:', error.message);
+        return null;
+    }
+}
+
 // ==================== IQOMAH TIMES ROUTES ====================
 app.get('/api/iqomah-times', (req, res) => {
     const sql = 'SELECT id, prayer_name, minutes, updated_at FROM iqomah_times ORDER BY id';
@@ -1654,6 +1863,51 @@ app.post('/api/upload', authenticateToken, (req, res) => {
     });
 });
 
+async function autoUpdatePrayerTimesOnStartup() {
+    try {
+        console.log('🔄 Checking for prayer time updates from API...');
+        
+        const today = new Date().toISOString().split('T')[0];
+        const lastUpdate = await getLastUpdateDate();
+        
+        if (lastUpdate === today) {
+            console.log('✅ Jadwal sudah update hari ini, skip auto-update');
+            return;
+        }
+        
+        const apiPrayers = await fetchFromAladhanAPI();
+        if (!apiPrayers) {
+            console.log('⚠️ Gagal mengambil data dari API, skip auto-update');
+            return;
+        }
+        
+        const dbPrayers = await getPrayerTimesFromDB();
+        
+        let hasChanges = false;
+        for (const apiPrayer of apiPrayers) {
+            const dbPrayer = dbPrayers.find(p => p.prayer_name === apiPrayer.prayer_name);
+            if (dbPrayer && dbPrayer.time !== apiPrayer.time) {
+                hasChanges = true;
+                console.log(`📝 Perubahan terdeteksi: ${apiPrayer.prayer_name} ${dbPrayer.time} → ${apiPrayer.time}`);
+                break;
+            }
+        }
+        
+        if (hasChanges) {
+            console.log('📝 Ada perubahan jadwal, update database...');
+            await updatePrayerTimesInDB(apiPrayers);
+            await saveLastUpdateDate(today);
+            broadcast('prayer_times_updated', apiPrayers);
+            console.log('✅ Jadwal shalat berhasil diupdate');
+        } else {
+            console.log('✅ Tidak ada perubahan jadwal');
+            await saveLastUpdateDate(today);
+        }
+    } catch (error) {
+        console.error('❌ Error in autoUpdatePrayerTimesOnStartup:', error.message);
+    }
+}
+
 // ==================== HEALTH CHECK ====================
 app.get('/api/health', (req, res) => {
     pool.query('SELECT 1', (err) => {
@@ -1671,6 +1925,157 @@ app.get('/api/health', (req, res) => {
             websocket: clients.size + ' clients connected'
         });
     });
+});
+
+// ==================== GOOGLE SHEETS INTEGRATION ====================
+const { google } = require('googleapis');
+
+const CREDENTIALS_PATH = path.join(__dirname, 'masjid-al-ikhlas-sync-100beb194a63.json');
+// ID Google Sheet (ambil dari URL sheet)
+const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID || '1mMsUObQ79l3w6lL4q9Cj_xYSo1DJr46J5b2J3y9IdsQ'; 
+// Nama sheet/tab tujuan
+const SHEET_NAME = 'Laporan Keuangan';
+
+// Fungsi autentikasi ke Google API
+async function getGoogleAuth() {
+    try {
+        const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
+        
+        const auth = new google.auth.JWT({
+            email: credentials.client_email,
+            key: credentials.private_key,
+            scopes: [
+                'https://www.googleapis.com/auth/spreadsheets',
+                'https://www.googleapis.com/auth/drive'
+            ]
+        });
+        
+        return auth;
+    } catch (error) {
+        console.error('❌ Error loading Google credentials:', error.message);
+        return null;
+    }
+}
+
+// Endpoint untuk sync data keuangan ke Google Sheet
+app.post('/api/sync-to-google-sheet', authenticateToken, async (req, res) => {
+    try {
+        console.log('📤 Menyinkronkan data ke Google Sheet...');
+        
+        // 1. Ambil data dari database
+        const [transactions] = await pool.promise().query(`
+            SELECT 
+                DATE(transaction_date) as tanggal,
+                type,
+                category,
+                amount,
+                description,
+                created_at
+            FROM finances 
+            ORDER BY transaction_date DESC
+        `);
+        
+        if (transactions.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Tidak ada data keuangan untuk disinkronkan'
+            });
+        }
+        
+        // 2. Format data untuk Google Sheets (Array of Arrays)
+        const header = ['Tanggal', 'Tipe', 'Kategori', 'Jumlah (Rp)', 'Deskripsi', 'Waktu Input'];
+        const rows = transactions.map(t => [
+            t.tanggal,
+            t.type === 'masuk' ? 'Pemasukan' : 'Pengeluaran',
+            t.category,
+            parseInt(t.amount).toLocaleString('id-ID'),
+            t.description || '-',
+            new Date(t.created_at).toLocaleString('id-ID')
+        ]);
+        
+        const dataToWrite = [header, ...rows];
+        
+        // 3. Autentikasi ke Google API
+        const auth = await getGoogleAuth();
+        if (!auth) {
+            throw new Error('Gagal autentikasi ke Google API');
+        }
+        
+        const sheets = google.sheets({ version: 'v4', auth });
+        
+        // 4. Cek apakah sheet sudah ada, jika belum buat
+        try {
+            await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+        } catch (error) {
+            // Sheet tidak ditemukan
+            return res.status(400).json({
+                success: false,
+                message: 'Google Sheet tidak ditemukan. Pastikan SPREADSHEET_ID benar dan service account memiliki akses.'
+            });
+        }
+        
+        // 5. Clear data yang ada
+        await sheets.spreadsheets.values.clear({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${SHEET_NAME}!A:F`
+        });
+        
+        // 6. Tulis data baru
+        await sheets.spreadsheets.values.update({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${SHEET_NAME}!A1`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: dataToWrite }
+        });
+        
+        console.log(`✅ Synced ${transactions.length} records to Google Sheet`);
+        
+        res.json({
+            success: true,
+            message: `Berhasil sync ${transactions.length} transaksi ke Google Sheet`,
+            sheetId: SPREADSHEET_ID,
+            totalSynced: transactions.length
+        });
+        
+    } catch (error) {
+        console.error('❌ Error syncing to Google Sheet:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Gagal sync ke Google Sheet: ' + error.message
+        });
+    }
+});
+
+// Endpoint untuk cek status koneksi Google Sheet
+app.get('/api/google-sheet-status', authenticateToken, async (req, res) => {
+    try {
+        const auth = await getGoogleAuth();
+        if (!auth) {
+            return res.json({ success: false, connected: false, error: 'Auth failed' });
+        }
+        
+        const sheets = google.sheets({ version: 'v4', auth });
+        
+        const metadata = await sheets.spreadsheets.get({
+            spreadsheetId: SPREADSHEET_ID,
+            fields: 'properties.title,sheets.properties'
+        });
+        
+        res.json({
+            success: true,
+            connected: true,
+            sheetTitle: metadata.data.properties.title,
+            sheetUrl: `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}`
+        });
+        
+    } catch (error) {
+        console.error('Error checking Google Sheet status:', error);
+        res.json({ 
+            success: false, 
+            connected: false, 
+            error: error.message 
+        });
+    }
 });
 
 // ==================== STATIC FILES ====================
@@ -1704,7 +2109,7 @@ app.use((err, req, res, next) => {
 // ==================== START SERVER ====================
 const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
     console.log('');
     console.log('╔════════════════════════════════════════════════════════════╗');
     console.log('║                                                            ║');
@@ -1724,6 +2129,13 @@ server.listen(PORT, () => {
     console.log('');
     console.log('Press Ctrl+C to stop the server');
     console.log('');
+    
+    // Jalankan auto-update jadwal shalat
+    try {
+        await autoUpdatePrayerTimesOnStartup();
+    } catch (error) {
+        console.error('❌ Auto-update jadwal shalat gagal:', error.message);
+    }
 });
 
 // Graceful shutdown
